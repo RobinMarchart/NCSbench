@@ -26,7 +26,7 @@ tcpdump -i $4 -s 65535 -w "$FOLDER_NAME/record.pcap" &
 if [ "$(uname)" == "Darwin" ]; then
 	gtimeout --signal=SIGINT $1 python3 controller.py --address $3 --measurement_folder $FOLDER_NAME &
 else
-	timeout --signal=SIGINT $1 taskset -c 0,1 python3 controller.py --address $3 --measurement_folder $FOLDER_NAME &
+	timeout --signal=SIGINT $1 taskset -c 0,1 ../venv/bin/python3 controller.py -v --address $3 --measurement_folder $FOLDER_NAME &
 fi
 pid=$!
 wait $pid

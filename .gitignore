@@ -236,5 +236,6 @@ TSWLatexianTemp*
 
 /docs/html/
 /docs/latex/
-
+benchmark/measurements/
+venv/
 
