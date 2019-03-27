@@ -37,7 +37,7 @@ def sensor2float(int_sensor):
 NO_OF_DELAYS = 1
 NO_OF_SIM_STEPS = 10
 NO_OF_VOLTAGES_PER_DELAY = 2 * (1 + 10)
-H2R_PACKET_FORMAT = 'qq%sq' % (NO_OF_DELAYS * NO_OF_VOLTAGES_PER_DELAY)
+H2R_PACKET_FORMAT = '>bqq%sq' % (NO_OF_DELAYS * NO_OF_VOLTAGES_PER_DELAY)
 H2R_PACKET_SIZE = struct.calcsize(H2R_PACKET_FORMAT)
 class H2R_PACKET_VARS:
     """
@@ -47,7 +47,7 @@ class H2R_PACKET_VARS:
     Timestamp = 1
 
 
-R2H_PACKET_FORMAT = 'qqqqqqqqqqq'
+R2H_PACKET_FORMAT = '>qqqqqqqqqqqb'
 R2H_PACKET_SIZE = struct.calcsize(R2H_PACKET_FORMAT)
 class R2H_PACKET_VARS:
     """

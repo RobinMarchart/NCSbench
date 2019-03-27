@@ -238,4 +238,5 @@ TSWLatexianTemp*
 /docs/latex/
 benchmark/measurements/
 venv/
+git-daemon-export-ok
 

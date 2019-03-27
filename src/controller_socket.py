@@ -206,7 +206,7 @@ class ControllerSocket:
                     del self.tasrx_ks[seq_number - 1]
                     del self.taw_ks[seq_number - 1]
 
-            except KeyError:
+            except KeyError as e:
                 logging.debug("Packet not found")
 
         except socket.error:

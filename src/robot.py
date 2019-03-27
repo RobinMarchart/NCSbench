@@ -7,6 +7,7 @@ import logging
 import os
 import traceback
 import controller_params as p
+import atexit
 
 import ev3dev.ev3 as ev3
 import packet
@@ -146,7 +147,7 @@ def main(ts, c_addr, s_port, a_port, log_enabled):
     leds.set_color(leds.LEFT, leds.RED)
     leds.set_color(leds.RIGHT, leds.RED)
 
-    logging.info("Lay down the robot. Press the up button to start calibration. Press the down button to exit.")
+    logging.info("Lay down the robot. Press the up button or [ENTER] to start calibration. Press the down button to exit.")
 
     # Initialization of the sensors
     gyroSensorValueRaw, \
@@ -393,6 +394,12 @@ if __name__ == "__main__":
 
     #  Nice to process for better timing performance (needs sudo!)
     os.nice(-11)
+    
+    def at_exit():
+        motorDutyCycleFile_left, motorDutyCycleFile_right = init_actuators()
+        SetDuty(motorDutyCycleFile_left, 0)
+        SetDuty(motorDutyCycleFile_right, 0)
+    atexit.register(at_exit)
 
     main(p.SAMPLING_TIME, args.address, args.sport, args.aport, args.logging)
 

@@ -13,4 +13,4 @@ fi
 rmmod legoev3_battery 2>/dev/null
 rmmod legoev3_bluetooth 2>/dev/null
 
-python3 robot.py -a $1
+python3 robot.py -v -a $1
