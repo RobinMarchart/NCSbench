@@ -3,7 +3,7 @@ import socket,struct,threading,enum,atexit
 class SocketAlreadyExistsException(Exception):
 	pass
 
-EVENTS=enum.IntEnum('EVENTS','EXIT ERR INIT CRANE_UP CRANE_STOP CRANE_DOWN ROBOT_CALLIB ROBOT_RUN ROBOT_STOP CONTINUE')
+EVENTS=enum.IntEnum('EVENTS','EXIT ERR INIT CRANE_UP CRANE_STOP CRANE_DOWN ROBOT_START ROBOT_STOP CONTINUE')
 CLIENTS=enum.IntEnum('CLIENTS','ROBOT CRANE')
 	
 class Event:
@@ -40,35 +40,40 @@ class ControllSocket:
 			sock=self
 		self.sock=socket.socket()
 		self.event=list()
-		self.buff={}
 		for x in EVENTS:
 			self.event.append(Event(x))
 			
 	def _send(self,event,data,sock):
 		if len(data)<2048:
-			sock.send(struct.pack('!Bp',event,data))
+			b=bytearray(struct.pack("!B",event))
+			b.append(data)
+			sock.send(b)
 		else:
-			x=len(data)-2046
+			x=len(data)-2047
 			y=0
 			while y<x:
-				sock.send(struct.pack('!Bp',EVENTS.CONTINUE,data[y,y+2047]))
+				b=bytearray(struct.pack("!B",Eve.CONTINUE))
+				b.append(data[y:y+2047])
+				sock.send(b)
 				y+=2047
-			sock.send(struct.pack('!Bp',event,data))
+			b=bytearray(struct.pack("!B",event))
+			b.append(data[y:])
+			sock.send(b)
 			
 	def recv(self,addr,sock):
 		data=sock.recv(2048)
-		type,data=struct.unpack('Bp',data)
-		if type==Event.CONTINUE:
-			if addr in self.buff:
-				self.buff[addr].extend(data)
-			else:
-				self.buff[addr]=bytearray(data)
+		type=struct.unpack("!B",data[0])
+		if len(data>1):
+			data=data[1:]
 		else:
-			if addr in self.buff:
-				self.buff[addr].extend(data)
-				self.event[type].notice(self.buff.pop(addr),addr,self)
-			else:
-				self.event[type].notice(data,addr,self)
+			data=bytes()
+		if type==Event.CONTINUE:
+			data=bytearray(data)
+			while type==EVENTS.CONTINUE:
+				datan=sock.recv(2048)
+				type=struct.unpack("!B",datan[0])
+				data.append(datan)
+		self.event[type].notice(data,addr,self)
 	
 	def close(self):
 		self.sock.close()

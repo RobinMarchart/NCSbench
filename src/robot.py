@@ -8,6 +8,7 @@ import os
 import traceback
 import controller_params as p
 import atexit
+import controll_socket
 
 import ev3dev.ev3 as ev3
 import packet
