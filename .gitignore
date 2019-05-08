@@ -240,3 +240,14 @@ benchmark/measurements/
 venv/
 git-daemon-export-ok
 
+#vscode
+.vscode/
+.env
+
+#python-packaging
+**/dist
+**/build
+**.egg-info
+
+#programm output
+**/settings.json
