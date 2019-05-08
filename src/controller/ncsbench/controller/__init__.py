@@ -8,8 +8,11 @@ import time
 
 import numpy as np
 from scipy import io
+from threading import Event
+from timeit import Timer
 
 import ncsbench.common.packet as packet
+import ncsbench.common.control_socket as control
 import ncsbench.controller.controller_filter as f
 import ncsbench.controller.controller_socket as cs
 
@@ -24,10 +27,17 @@ class Controller:
     # Threshold angle at which the controller kicks in
     start_threshold = 0.0
 
-    def __init__(self, ip_address, aport, sport, measurement_folder):
+    def __init__(self, ip_address, aport, sport, measurement_folder,csock:control.ControllerSocket):
         self.ref_vec =np.array([[0], [0], [0], [0], [0], [0], [0]])
         self.controller_socket = cs.ControllerSocket(ip_address, aport, sport, measurement_folder)
         self.filter = f.Filter()
+        self.csock=csock
+        csock.send(control.EVENTS.CRANE_UP,csock.clients[control.CLIENTS.CRANE])
+        csock.send(control.EVENTS.CRANE_STOP,csock.clients[control.CLIENTS.CRANE])
+        csock.send(control.EVENTS.ROBOT_CALLIB,csock.clients[control.CLIENTS.ROBOT])
+        csock.event[control.EVENTS.ROBOT_START].wait()
+        csock.send(control.EVENTS.CRANE_DOWN,csock.clients[control.CLIENTS.CRANE])
+
 
     def control_loop(self):
         """
@@ -204,20 +214,11 @@ class Controller:
             voltage_list[2*i+3] = int(voltage_right*1000000)
         return voltage_list
 
-if __name__ == "__main__":
+controller = None
 
-    # Assign description to the help doc
-    parser = argparse.ArgumentParser(description='Distributed controller application')
+def main(args):
 
-    # Add arguments
-    parser.add_argument('-a', '--address', type=str, help='IP address of destination', default='0.0.0.0')
-    parser.add_argument('-m', '--measurement_folder', type=str, help='Subfolder for measurements', default='.')
-    parser.add_argument('-sp', '--sport', type=int, help='Sensor port number', default=34543)
-    parser.add_argument('-ap', '--aport', type=int, help='Actuator port number', default=34544)
-    parser.add_argument('-v', '--verbose', action='store_true', help='Put app in verbose mode')
-
-    # Array for all arguments passed to script
-    args = parser.parse_args()
+    
 
     # Configure logging
     logger = logging.getLogger()
@@ -225,14 +226,21 @@ if __name__ == "__main__":
         logger.setLevel(logging.DEBUG)
     else:
         logger.setLevel(logging.INFO)
+    e=Event()
+    s=control.ControllerSocket(args.cport,e)
+    e.wait()
+    del e
+    args.address=s.types[control.CLIENTS.ROBOT].addr
 
     logging.debug("IP address of the application: %s", args.address)
 
     # Logging from the controller
     timenow = datetime.datetime.now()
     try:
-        controller = Controller(args.address, args.aport, args.sport, args.measurement_folder)
-        controller.control_loop()
+        global controller
+        controller = Controller(args.address, args.aport, args.sport, args.measurement_folder,s)
+        t=Timer(stmt="controller.control_loop()",globals=globals())
+        t.timeit(1)
     except KeyboardInterrupt:
         logging.info("Control loop stopped.")
         exit()

@@ -15,7 +15,7 @@ def run(args):
             pass
     MOTOR.polarity = 'inversed'
     atexit.register(stop_coast)
-    from ncsbench.common.controll_socket import CraneSocket
+    from ncsbench.common.control_socket import CraneSocket
     CraneSocket((args.address,args.cport),False)
 
 def stop():

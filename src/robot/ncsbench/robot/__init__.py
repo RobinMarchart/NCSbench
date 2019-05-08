@@ -8,7 +8,7 @@ import os
 import traceback
 import ncsbench.common.params as p
 import atexit
-import  ncsbench.common.controll_socket as controll_socket
+import  ncsbench.common.control_socket as controll_socket
 
 import ncsbench.common.packet as packet
 

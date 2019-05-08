@@ -170,12 +170,13 @@ def _controller_shutdown_hook(s):
 
 
 class ControllerSocket(ControllSocket):
-    def __init__(self, cport):
+    def __init__(self, cport,r_event:threading.Event):
         super().__init__()
         self.sock.bind(("", cport))
         self.sock.listen()
         self.clients = dict()
         self.types = [len(CLIENTS)]
+        self.r_event=r_event
 
         def recv_loop(sock, client):
             while True:
@@ -207,6 +208,8 @@ class ControllerSocket(ControllSocket):
             c = sock.clients[addr]
             sock.types[t] = c
             c.type = t
+            if t==CLIENTS.ROBOT:
+                sock.r_event.set()
 
         self.event[EVENTS.INIT].always.add(init)
 

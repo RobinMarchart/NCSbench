@@ -34,7 +34,9 @@ def main():
     def ctrl(args):
         from threading import Thread
         Thread(target=serve, args=(args.port, args.verbose, args.logging,
-                                   args.sport, args.aport, args.cport),daemon=True).start()
+                                   args.sport, args.aport, args.cport),daemon=False).start()
+        from ncsbench.controller import main as m
+        Thread(target=m,args=(args,)).start()
 
     def client(args):
         from importlib import import_module
@@ -62,44 +64,41 @@ def main():
         settings = json.load(open("settings.json", "r"))
     except FileNotFoundError:
         settings = {}
-    default = {"verbose": False, "logging": False, "sport": 34543,
-               "aport": 34544, "cport": 34545, "type": "ev3"}
+    defaults ={
+        "controller":(ctrl,{
+            "verbose":{"default":False,"type":int,"choices":["0","1"]},
+            "logging":{"default":False,"type":int,"choices":["0","1"]},
+            "sport":{"default":34543,"type":int},
+            "aport":{"default":34544,"type":int},
+            "cport":{"default":34545,"type":int},
+            "measurement_folder":{"default":".",'help':'Subfolder for measurements'}
+        }),
+        "robot":(rbt,{"type":{"default":"ev3"}}),
+        "crane":(crn,{"type":{"default":"ev3"}})
+    }
     changed = False
     if not "port" in settings:
         settings["port"] = 5555
         changed = True
     parser = argparse.ArgumentParser()
     parser.add_argument("--port", type=int, default=settings["port"])
-    parser.add_argument("command", choices=["controller", "robot", "crane"])
+    parser.add_argument("command", choices=defaults)
     parser.add_argument("--override", action="store_true")
     args = parser.parse_known_args()
-    if args[0].command == "controller":
-        default = {"verbose": False, "logging": False,
-                   "sport": 34543, "aport": 34544, "cport": 34545}
-        for key in default:
-            if not key in settings:
-                settings[key] = default[key]
-                changed = True
-        parser = argparse.ArgumentParser()
-        parser.add_argument("--verbose", type=bool,
-                            choices=[True, False], default=settings["verbose"])
-        parser.add_argument("--logging", type=bool,
-                            choices=[True, False], default=settings["logging"])
-        parser.add_argument("--sport", type=int, default=settings["sport"])
-        parser.add_argument("--aport", type=int, default=settings["aport"])
-        parser.add_argument("--cport", type=int, default=settings["cport"])
-        a1,a2=args
-        args=a2,a1
-        args = parser.parse_args(*args)
-        
-    else:
-        if "type" not in settings:
-            settings["type"]="ev3"
+    a1,a2=args
+    a=defaults[a1.command]
+    parser=argparse.ArgumentParser()
+    for key in a[1]:
+        if (not key in settings) and ("default" in a[1][key]):
+            settings[key]=a[1][key]["default"]
             changed=True
-        parser = argparse.ArgumentParser()
-        parser.add_argument("--type")
-        args = parser.parse_args(*args)
+        else:
+            a[1][key]["default"]=settings[key]
+        parser.add_argument(key,**a[1][key])
+    args=a2,a1
+    args = parser.parse_args(*args)
         
+    
     if args.override:
         for key in settings:
             if key in args.__dict__:
@@ -109,12 +108,7 @@ def main():
     if changed:
         json.dump(settings,open("settings.json","w"),indent=4)
     
-    if args.command=="robot":
-        rbt(args)
-    elif args.command=="crane":
-        crn(args)
-    else:
-        ctrl(args)
+    a[0](args)
 
 
 if __name__ == '__main__':
