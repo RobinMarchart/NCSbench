@@ -66,15 +66,16 @@ def main():
         settings = {}
     defaults ={
         "controller":(ctrl,{
-            "verbose":{"default":False,"type":int,"choices":["0","1"]},
-            "logging":{"default":False,"type":int,"choices":["0","1"]},
-            "sport":{"default":34543,"type":int},
-            "aport":{"default":34544,"type":int},
-            "cport":{"default":34545,"type":int},
-            "measurement_folder":{"default":".",'help':'Subfolder for measurements'}
+            "--verbose":{"default":False,"type":int,"choices":["0","1"]},
+            "--logging":{"default":False,"type":int,"choices":["0","1"]},
+            "--sport":{"default":34543,"type":int},
+            "--aport":{"default":34544,"type":int},
+            "--cport":{"default":34545,"type":int},
+            "--measurement_folder":{"default":".",'help':'Subfolder for measurements'},
+            "--result_folder":{"default":".."}
         }),
-        "robot":(rbt,{"type":{"default":"ev3"}}),
-        "crane":(crn,{"type":{"default":"ev3"}})
+        "robot":(rbt,{"--type":{"default":"ev3"}}),
+        "crane":(crn,{"--type":{"default":"ev3"}})
     }
     changed = False
     if not "port" in settings:
@@ -112,4 +113,4 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    main()#TODO run as subprocess and relaunch after normal exit-> multi try run or maybe until x viable runs sacceded, maybe also Stop Multicast at this level bat shutting down non controllers

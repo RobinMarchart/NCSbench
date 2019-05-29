@@ -6,13 +6,15 @@ import argparse
 import logging
 import os
 import traceback
-import ncsbench.common.params as p
 import atexit
-import  ncsbench.common.control_socket as controll_socket
+from threading import Event
+import common.params as p
+import common.control_socket as controll_socket
 
-import ncsbench.common.packet as packet
+import common.packet as packet
 
 ev3 = None
+
 
 # ----------- Sensor Methods -----------------
 
@@ -73,7 +75,8 @@ def init_sensors():
     # Create EV3 resource objects
     gyroSensor = ev3.GyroSensor()
     gyroSensor.mode = gyroSensor.MODE_GYRO_RATE
-
+    touch1=ev3.TouchSensor(ev3.INPUT_3)
+    touch2=ev3.TouchSensor(ev3.INPUT_4)
     motorLeft = ev3.LargeMotor('outC')
     motorRight = ev3.LargeMotor('outB')
 
@@ -89,7 +92,7 @@ def init_sensors():
     motorEncoderLeft = open(motorLeft._path + "/position", "rb")
     motorEncoderRight = open(motorRight._path + "/position", "rb")
 
-    return gyroSensorValueRaw, motorEncoderLeft, motorEncoderRight
+    return gyroSensorValueRaw, motorEncoderLeft, motorEncoderRight,touch1,touch2
 
 # ----------- Actuator Methods -----------------
 
@@ -148,6 +151,8 @@ def main(ts, c_addr, s_port, a_port, c_port, log_enabled):
     :return: None
     """
 
+    start_time=None
+
     buttons = ev3.Button()
     leds = ev3.Leds()
 
@@ -159,7 +164,8 @@ def main(ts, c_addr, s_port, a_port, c_port, log_enabled):
 
     # Initialization of the sensors
     gyroSensorValueRaw, \
-        motorEncoderLeft, motorEncoderRight = init_sensors()
+        motorEncoderLeft, motorEncoderRight ,\
+            touch1,touch2= init_sensors()
 
     logging.debug("Initialized sensors")
 
@@ -169,6 +175,10 @@ def main(ts, c_addr, s_port, a_port, c_port, log_enabled):
     logging.debug("Initialized actuators")
 
     c_sock = controll_socket.RobotSocket((c_addr, c_port))
+    def fun(data, addr, sock):
+        global finished
+        finished=True
+    c_sock.event[controll_socket.EVENTS.ROBOT_STOP].always.add()
     c_sock.init()
     # wait for controller to respond
     c_sock.event[controll_socket.EVENTS.ROBOT_CALLIB].wait()
@@ -195,6 +205,8 @@ def main(ts, c_addr, s_port, a_port, c_port, log_enabled):
     udp_socket_actuator.bind(('', a_port))
 
     logging.debug("Initialized actuator UDP socket")
+
+    c_sock.send(controll_socket.EVENTS.ROBOT_START)
 
     # Inits:
     next_trigger_time = 0  # he "starts" the loop sending the first message
@@ -291,6 +303,7 @@ def main(ts, c_addr, s_port, a_port, c_port, log_enabled):
                         leds.set_color(leds.LEFT, leds.GREEN)
                         leds.set_color(leds.RIGHT, leds.GREEN)
                         first_packet = False
+                        start_time=time.perf_counter()
                     tasrx_k = time.perf_counter()  # reception of the time request from the controller
                     logging.debug("Actuation %d received at %f" % (k, tasrx_k))
                     receptionStarted = True
@@ -353,6 +366,37 @@ def main(ts, c_addr, s_port, a_port, c_port, log_enabled):
 
                     f.close()
                 exit()
+            if finished:
+                logging.info("Control loop finished.") 
+                leds.set_color(leds.LEFT, leds.RED)
+                leds.set_color(leds.RIGHT, leds.RED)
+                if log_enabled:
+                    f.close()
+                message=bytearray(struct.pack("!d",-1.0))
+                if log_enabled:
+                    message.extend(open(filename,"rb").read())
+                    os.remove(filename)
+                c_sock.send(controll_socket.EVENTS.ROBOT_STOP,message)
+                c_sock.unregister_shutdown()
+                exit(0)
+            if touch1.is_pressed or touch2.is_pressed:
+                stop_time=time.perf_counter()
+                SetDuty(motorDutyCycleFile_left, 0)
+                SetDuty(motorDutyCycleFile_right, 0)
+                logging.info("Control loop stopped.") 
+                leds.set_color(leds.LEFT, leds.RED)
+                leds.set_color(leds.RIGHT, leds.RED)
+                if log_enabled:
+                    f.close()
+                time=stop_time-start_time
+                message=bytearray(struct.pack("!d",time))
+                if log_enabled:
+                    message.extend(open(filename,"rb").read())
+                    os.remove(filename)
+                c_sock.send(controll_socket.EVENTS.ROBOT_STOP,message)
+                c_sock.unregister_shutdown()
+                exit(0)
+                
 
             # If time's up, break reception loop
             if time.perf_counter() >= (next_trigger_time-0.006):
@@ -385,6 +429,8 @@ def main(ts, c_addr, s_port, a_port, c_port, log_enabled):
                     f.write("%f,%f,%f,%f,%f\n" %
                             (gyro, enc_l, enc_r, tau_RTT, prediction_count-1))
                 break
+
+finished=False
 
 def run(args):
     global ev3

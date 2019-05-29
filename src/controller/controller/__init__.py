@@ -11,12 +11,12 @@ from scipy import io
 from threading import Event
 from timeit import Timer
 
-import ncsbench.common.packet as packet
-import ncsbench.common.control_socket as control
-import ncsbench.controller.controller_filter as f
-import ncsbench.controller.controller_socket as cs
+import common.packet as packet
+import common.control_socket as control
+import common.controller_params as p
+import controller.controller_filter as f
+import controller.controller_socket as cs
 
-import ncsbench.common.controller_params as p
 
 class Controller:
     """

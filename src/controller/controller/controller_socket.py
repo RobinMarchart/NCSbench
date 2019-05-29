@@ -9,8 +9,8 @@ import logging
 import time
 import traceback
 
-import ncsbench.common.packet as packet
-import ncsbench.controller.stats as stats
+import common.packet as packet
+import controller.stats as stats
 
 MAX_QUEUE_LEN = 10
 

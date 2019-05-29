@@ -3,7 +3,8 @@ import enum
 import socket
 import threading
 import traceback
-
+import struct
+import pathlib
 
 class SocketAlreadyExistsException(Exception):
     pass
@@ -100,6 +101,7 @@ class ControllSocket:
 def _client_shutdown_hook(s):
     s.send(EVENTS.EXIT)
     s.close()
+#TODO exit on connection lost - ping continuesly
 
 
 class ClientSocket(ControllSocket):
@@ -139,6 +141,8 @@ class RobotSocket(ClientSocket):
 
     def init(self):
         super().init(CLIENTS.ROBOT)
+    def unregister_shutdown(self):
+        atexit.unregister(_client_shutdown_hook)
 
 
 class CraneSocket(ClientSocket):
@@ -170,13 +174,15 @@ def _controller_shutdown_hook(s):
 
 
 class ControllerSocket(ControllSocket):
-    def __init__(self, cport,r_event:threading.Event):
+    def __init__(self, cport,r_event:threading.Event,c_event:threading.Event,result_folder):
         super().__init__()
         self.sock.bind(("", cport))
         self.sock.listen()
         self.clients = dict()
         self.types = [len(CLIENTS)]
         self.r_event=r_event
+        self.c_event=c_event
+        self.result_folder=result_folder
 
         def recv_loop(sock, client):
             while True:
@@ -210,8 +216,12 @@ class ControllerSocket(ControllSocket):
             c.type = t
             if t==CLIENTS.ROBOT:
                 sock.r_event.set()
+            else:
+                sock.c_event.set()
 
         self.event[EVENTS.INIT].always.add(init)
+
+            
 
     def close(self):
         super().close()
