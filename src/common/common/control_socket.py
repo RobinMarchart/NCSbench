@@ -137,7 +137,7 @@ class ClientSocket(ControllSocket):
 
 class RobotSocket(ClientSocket):
     def __init__(self, controller,daemon=True):
-        super().__init__(controller)
+        super().__init__(controller,daemon)
 
     def init(self):
         super().init(CLIENTS.ROBOT)
@@ -147,7 +147,7 @@ class RobotSocket(ClientSocket):
 
 class CraneSocket(ClientSocket):
     def __init__(self, controller,daemon=True):
-        super().__init__(controller)
+        super().__init__(controller,daemon)
         import ncsbench.crane as crane
 
         def up(data, addr, self):

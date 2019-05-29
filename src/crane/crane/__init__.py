@@ -10,12 +10,13 @@ def run(args):
         try:
             m = EV3.MediumMotor(port)
             m.stop()
+            global MOTOR
             MOTOR = m
         except Exception:
             pass
     MOTOR.polarity = 'inversed'
     atexit.register(stop_coast)
-    from ncsbench.common.control_socket import CraneSocket
+    from common.control_socket import CraneSocket
     CraneSocket((args.address,args.cport),False)
 
 def stop():

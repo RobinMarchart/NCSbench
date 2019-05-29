@@ -35,7 +35,7 @@ def main():
         from threading import Thread
         Thread(target=serve, args=(args.port, args.verbose, args.logging,
                                    args.sport, args.aport, args.cport),daemon=False).start()
-        from ncsbench.controller import main as m
+        from controller import main as m
         Thread(target=m,args=(args,)).start()
 
     def client(args):
@@ -52,12 +52,12 @@ def main():
 
     def rbt(args):
         client(args)
-        from ncsbench.robot import run
+        from robot import run
         run(args)
 
     def crn(args):
         client(args)
-        from ncsbench.crane import run
+        from crane import run
         run(args)
     
     try:
@@ -113,4 +113,4 @@ def main():
 
 
 if __name__ == '__main__':
-    main()#TODO run as subprocess and relaunch after normal exit-> multi try run or maybe until x viable runs sacceded, maybe also Stop Multicast at this level bat shutting down non controllers
+    main()#TODO run as subprocess and relaunch after normal exit-> multi try run or maybe until x viable runs succeded, maybe also Stop Multicast at this level bat shutting down non controllers

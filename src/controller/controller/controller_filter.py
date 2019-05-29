@@ -1,4 +1,4 @@
-import common.controller_params as p
+import common.params as p
 
 
 class Filter:

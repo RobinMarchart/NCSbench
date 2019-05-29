@@ -13,7 +13,7 @@ from timeit import Timer
 
 import common.packet as packet
 import common.control_socket as control
-import common.controller_params as p
+import common.params as p
 import controller.controller_filter as f
 import controller.controller_socket as cs
 
@@ -218,18 +218,18 @@ controller = None
 
 def main(args):
 
-    
-
     # Configure logging
     logger = logging.getLogger()
     if args.verbose:
         logger.setLevel(logging.DEBUG)
     else:
         logger.setLevel(logging.INFO)
-    e=Event()
-    s=control.ControllerSocket(args.cport,e)
-    e.wait()
-    del e
+    e1=Event()
+    e2=Event()
+    s=control.ControllerSocket(args.cport,e1,e2,args.result_folder)
+    e1.wait()
+    e2.wait()
+    del e1,e2
     args.address=s.types[control.CLIENTS.ROBOT].addr
 
     logging.debug("IP address of the application: %s", args.address)
@@ -239,8 +239,7 @@ def main(args):
     try:
         global controller
         controller = Controller(args.address, args.aport, args.sport, args.measurement_folder,s)
-        t=Timer(stmt="controller.control_loop()",globals=globals())
-        t.timeit(1)
+        controller.control_loop()
     except KeyboardInterrupt:
         logging.info("Control loop stopped.")
         exit()
