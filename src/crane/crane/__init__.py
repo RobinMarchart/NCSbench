@@ -7,13 +7,14 @@ def run(args):
     global EV3, MOTOR
     EV3=args.type
     for port in [EV3.OUTPUT_A, EV3.OUTPUT_B, EV3.OUTPUT_C, EV3.OUTPUT_D]:
-        try:
-            m = EV3.MediumMotor(port)
-            m.stop()
+        
+        m = EV3.LargeMotor(port)
+        if m.connected:
             global MOTOR
             MOTOR = m
-        except Exception:
-            pass
+            break
+    if not MOTOR:
+        raise Exception("No motor connected")
     MOTOR.polarity = 'inversed'
     atexit.register(stop_coast)
     from common.control_socket import CraneSocket
