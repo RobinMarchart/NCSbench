@@ -17,6 +17,9 @@ ev3 = None
 
 
 # ----------- Sensor Methods -----------------
+#gyro sensor:
+#1. ev3-uart > /sys/class/lego-port/port1/mode
+#2. lego-ev3-gyro > /sys/class/lego-port/port1/set_device
 
 
 def send_sensor_signals(socket, addr, port,

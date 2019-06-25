@@ -17,8 +17,6 @@ def run(args):
         raise Exception("No motor connected")
     MOTOR.polarity = 'inversed'
     atexit.register(stop_coast)
-    from common.control_socket import CraneSocket
-    CraneSocket((args.address,args.cport),False)
 
 def stop():
     MOTOR.stop(stop_action='hold')
