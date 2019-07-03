@@ -40,7 +40,7 @@ def main():
 
     def client(args):
         from importlib import import_module
-        args.type = import_module("ev3dev."+args.type)
+        args.lib = import_module("ev3dev."+args.type)
         addr, d = rcv(args.port)
         args.address = addr[0]
         verbose, logging, sport, aport, cport = d
@@ -74,8 +74,15 @@ def main():
             "--measurement_folder":{"default":".",'help':'Subfolder for measurements'},
             "--result_folder":{"default":".."}
         }),
-        "robot":(rbt,{"--type":{"default":"ev3"}}),
-        "crane":(crn,{"--type":{"default":"ev3"}})
+        "robot":(rbt,{"--type":{"default":"ev3"},
+            "--motor_l_port":{"default":"B","choices":["A","B","C","D"]},
+            "--motor_r_port":{"default":"A","choices":["A","B","C","D"]},
+            "--touch_1_port":{"default":"1","choices":["1","2","3","4"]},
+            "--touch_2_port":{"default":"2","choices":["1","2","3","4"]},
+            "--gyro_port":{"default":"4","choices":["1","2","3","4"]}
+            }),
+        "crane":(crn,{"--type":{"default":"ev3"},
+            "--motor_port":{"default":"A","choices":["A","B","C","D"]}})
     }
     changed = False
     if not "port" in settings:
