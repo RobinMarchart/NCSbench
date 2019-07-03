@@ -76,12 +76,19 @@ def init_sensors():
     :return: Gyro and EV3Motors instances
     """
     # Create EV3 resource objects
-    gyroSensor = ev3.GyroSensor()
+
+    if argv.type=="pistorms":
+        import common.pistorms_util as pi_util
+        pi_util.set_gyro(sensors[argv.gyro_port])
+        pi_util.set_touch(sensors[argv.touch_1_port])
+        pi_util.set_touch(sensors[argv.touch_2_port])
+    
+    gyroSensor = ev3.GyroSensor(sensors[argv.gyro_port])
     gyroSensor.mode = gyroSensor.MODE_GYRO_RATE
-    touch1=ev3.TouchSensor(ev3.INPUT_3)
-    touch2=ev3.TouchSensor(ev3.INPUT_4)
-    motorLeft = ev3.LargeMotor('outC')
-    motorRight = ev3.LargeMotor('outB')
+    touch1=ev3.TouchSensor(sensors[argv.touch_1_port])
+    touch2=ev3.TouchSensor(sensors[argv.touch_2_port])
+    motorLeft = ev3.LargeMotor(motors[argv.motor_l_port])
+    motorRight = ev3.LargeMotor(motors[argv.motor_r_port])
 
     # Open sensor and motor files
     gyroSensorValueRaw = open(gyroSensor._path + "/value0", "rb")
@@ -127,8 +134,8 @@ def init_actuators():
 
     :return: Gyro and EV3Motors instances
     """
-    motorLeft = ev3.LargeMotor('outC')
-    motorRight = ev3.LargeMotor('outB')
+    motorLeft = ev3.LargeMotor(motors[argv.motor_l_port])
+    motorRight = ev3.LargeMotor(motors[argv.motor_l_port])
 
     # Reset the motors
     motorLeft.reset()
@@ -151,6 +158,7 @@ def main(ts, c_addr, s_port, a_port, c_port, log_enabled):
     :param s_port: Port number to send sensor signals
     :param a_port: Port number to receive actuation signals
     :param log_enabled: Set to 'True' to activate logging sensor measurements & states into logfile
+    :param args: args object parsed from commandline and settings file
     :return: None
     """
 
@@ -435,9 +443,19 @@ def main(ts, c_addr, s_port, a_port, c_port, log_enabled):
 
 finished=False
 
+motors={}
+
+sensors={}
+
+argv=None
+
 def run(args):
-    global ev3
-    ev3 = args.type
+    global ev3,motors,sensors,argv
+    argv=args
+    import importlib
+    ev3 = importlib.import_module(args.type,"ev3dev") 
+    motors={"A":ev3.OUTPUT_A,"B":ev3.OUTPUT_B,"C":ev3.OUTPUT_C,"D":ev3.OUTPUT_D}
+    sensors={"1":ev3.INPUT_1,"2":ev3.INPUT_2,"3":ev3.INPUT_3,"4":ev3.INPUT_4}
     logger = logging.getLogger()
     if args.verbose:
         logger.setLevel(logging.DEBUG)

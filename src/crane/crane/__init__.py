@@ -8,7 +8,7 @@ def run(args):
     EV3=args.type
     for port in [EV3.OUTPUT_A, EV3.OUTPUT_B, EV3.OUTPUT_C, EV3.OUTPUT_D]:
         
-        m = EV3.LargeMotor(port)
+        m = EV3.MediumMotor(port)
         if m.connected:
             global MOTOR
             MOTOR = m
