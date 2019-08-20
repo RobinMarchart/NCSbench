@@ -5,6 +5,8 @@ import threading
 import traceback
 import struct
 import pathlib
+import typing
+import multiprocessing
 
 class SocketAlreadyExistsException(Exception):
     pass
@@ -14,6 +16,16 @@ EVENTS = enum.IntEnum(
     'EVENTS', 'EXIT ERR INIT CRANE_UP CRANE_STOP CRANE_DOWN ROBOT_CALLIB ROBOT_START ROBOT_STOP CONTINUE')
 CLIENTS = enum.IntEnum('CLIENTS', 'ROBOT CRANE')
 
+class ClientMessage:
+    def __init__(self, event_type:EVENTS, message:bool):
+        self.type=event_type
+        self.message=message
+
+class ControllerMessage:
+    def __init__(self, event_type:EVENTS, message:bool, client:CLIENTS):
+        self.type=event_type
+        self.message=message
+        self.client=client
 
 class Event:
 
@@ -42,7 +54,7 @@ class Client:
         self.sock = sock
         self.lock = threading.Lock()
 
-
+sock=None
 class ControllSocket:
     def __init__(self):
         if "sock" in globals():
@@ -74,6 +86,9 @@ class ControllSocket:
             b.extend(data[y:])
             sock.send(b)
 
+    def handle_incomeing(self, data, addr, event_type):
+        pass
+
     def recv(self, addr, sock):
         try:
             data = sock.recv(2048)
@@ -91,6 +106,7 @@ class ControllSocket:
                     type = datan[0]
                     data.extend(datan[1:])
             self.event[type].notice(data, addr, self)
+
         except Exception:
             traceback.print_exc()
 
@@ -111,6 +127,7 @@ class ClientSocket(ControllSocket):
         self.lock = threading.Lock()
         self.controller = controller
         self.sock.connect(self.controller)
+        self.queue=multiprocessing.Queue()
 
         atexit.register(_client_shutdown_hook, self)
 
@@ -126,6 +143,9 @@ class ClientSocket(ControllSocket):
             exit()
 
         self.event[EVENTS.EXIT].always.add(shutdown)
+    
+    def handle_incomeing(self, data, addr, event_type):
+        queue.put(ClientMessage(event_type,data))
 
     def send(self, event, data=b''):
         with self.lock:
@@ -179,10 +199,11 @@ class ControllerSocket(ControllSocket):
         self.sock.bind(("", cport))
         self.sock.listen()
         self.clients = dict()
-        self.types = [len(CLIENTS)]
+        self.addresses=[]
         self.r_event=r_event
         self.c_event=c_event
         self.result_folder=result_folder
+        self.queue=multiprocessing.Queue()
 
         def recv_loop(sock, client):
             while True:
@@ -212,7 +233,7 @@ class ControllerSocket(ControllSocket):
         def init(data, addr, sock):
             t = data[0]
             c = sock.clients[addr]
-            sock.types[t] = c
+            sock.addresses.insert(t,addr)
             c.type = t
             if t==CLIENTS.ROBOT:
                 sock.r_event.set()
@@ -221,7 +242,8 @@ class ControllerSocket(ControllSocket):
 
         self.event[EVENTS.INIT].always.add(init)
 
-            
+    def handle_incomeing(self, data, addr, event_type):
+        self.put(ControllerMessage(event_type,data,self.clients[addr].type))
 
     def close(self):
         super().close()
@@ -231,3 +253,41 @@ class ControllerSocket(ControllSocket):
     def send(self, event, client, data=b''):
         with client.lock:
             self._send(event, data, client.sock)
+
+class ReceiverEvent:
+
+    def __init__(self, num):
+        self.num = num
+        self.once = set()
+        self.always = set()
+        self.event = threading.Event()
+
+    def wait(self):
+        self.event.wait()
+
+    def notice(self, data):
+        self.event.set()
+        for f in self.once:
+            f(data)
+        once = set()
+        for f in self.always:
+            f(data)
+        self.event.clear()
+
+class ClientWorkerReceiver:
+    def __init__(self, queue):
+        self.queue=queue
+        self.events=[ReceiverEvent(e)for e in list(EVENTS)]
+        def f(q,e):
+            while True:
+                n=q.get()
+                e[n.type].notice(e.message)
+
+class ControllerWorkerReceiver:
+    def __init__(self, queue):
+        self.queue=queue
+        self.events=[[ReceiverEvent(e)for e in list(EVENTS)]for c in list(CLIENTS)]
+        def f(q,e):
+            while True:
+                n=q.get()
+                e[n.client][n.type].notice(e.message)

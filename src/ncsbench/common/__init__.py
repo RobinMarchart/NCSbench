@@ -1,4 +1,4 @@
-#! /usr/bin/python3
+
 import socket
 import struct
 import argparse
@@ -29,43 +29,42 @@ def serve(port, verbose, logging, sport, aport, cport):
     while True:
         server.sendto(message, ('<broadcast>', port))
         time.sleep(10)
+def ctrl(args):
+    from threading import Thread
+    Thread(target=serve, args=(args.port, args.verbose, args.logging,
+                               args.sport, args.aport, args.cport),daemon=False).start()
+    from controller import main as m
+    Thread(target=m,args=(args,)).start()
+
+def client(args):
+    from importlib import import_module
+    args.lib = import_module("ev3dev."+args.type)
+    addr, d = rcv(args.port)
+    args.address = addr[0]
+    verbose, logging, sport, aport, cport = d
+    args.verbose = verbose
+    args.logging = logging
+    args.sport = sport
+    args.aport = aport
+    args.cport = cport
+
+def rbt(args):
+    client(args)
+    from robot import run
+    run(args)
+
+def crn(args):
+    client(args)
+    from crane import run
+    run(args)
 
 def main():
-    def ctrl(args):
-        from threading import Thread
-        Thread(target=serve, args=(args.port, args.verbose, args.logging,
-                                   args.sport, args.aport, args.cport),daemon=False).start()
-        from controller import main as m
-        Thread(target=m,args=(args,)).start()
-
-    def client(args):
-        from importlib import import_module
-        args.lib = import_module("ev3dev."+args.type)
-        addr, d = rcv(args.port)
-        args.address = addr[0]
-        verbose, logging, sport, aport, cport = d
-        args.verbose = verbose
-        args.logging = logging
-        args.sport = sport
-        args.aport = aport
-        args.cport = cport
-
-    def rbt(args):
-        client(args)
-        from robot import run
-        run(args)
-
-    def crn(args):
-        client(args)
-        from crane import run
-        run(args)
-    
     try:
         settings = json.load(open("settings.json", "r"))
     except FileNotFoundError:
         settings = {}
     defaults ={
-        "controller":(ctrl,{
+        "controller":{
             "--verbose":{"default":False,"type":int,"choices":["0","1"]},
             "--logging":{"default":False,"type":int,"choices":["0","1"]},
             "--sport":{"default":34543,"type":int},
@@ -73,16 +72,16 @@ def main():
             "--cport":{"default":34545,"type":int},
             "--measurement_folder":{"default":".",'help':'Subfolder for measurements'},
             "--result_folder":{"default":".."}
-        }),
-        "robot":(rbt,{"--type":{"default":"ev3"},
+        },
+        "robot":{"--type":{"default":"ev3"},
             "--motor_l_port":{"default":"B","choices":["A","B","C","D"]},
             "--motor_r_port":{"default":"A","choices":["A","B","C","D"]},
             "--touch_1_port":{"default":"1","choices":["1","2","3","4"]},
             "--touch_2_port":{"default":"2","choices":["1","2","3","4"]},
             "--gyro_port":{"default":"4","choices":["1","2","3","4"]}
-            }),
-        "crane":(crn,{"--type":{"default":"ev3"},
-            "--motor_port":{"default":"A","choices":["A","B","C","D"]}})
+            },
+        "crane":{"--type":{"default":"ev3"},
+            "--motor_port":{"default":"A","choices":["A","B","C","D"]}}
     }
     changed = False
     if not "port" in settings:
@@ -96,13 +95,13 @@ def main():
     a1,a2=args
     a=defaults[a1.command]
     parser=argparse.ArgumentParser()
-    for key in a[1]:
-        if (not key in settings) and ("default" in a[1][key]):
-            settings[key]=a[1][key]["default"]
+    for key in a:
+        if (not key in settings) and ("default" in a[key]):
+            settings[key]=a[key]["default"]
             changed=True
         else:
-            a[1][key]["default"]=settings[key]
-        parser.add_argument(key,**a[1][key])
+            a[key]["default"]=settings[key]
+        parser.add_argument(key,**a[key])
     args=a2,a1
     args = parser.parse_args(*args)
         
@@ -116,8 +115,20 @@ def main():
     if changed:
         json.dump(settings,open("settings.json","w"),indent=4)
     
-    a[0](args)
+    if args.command =="controller":
+        server = socket.socket(
+            socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
+        server.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+        server.settimeout(0.2)
+        server.bind(("", args.port+1))
+        message = struct.pack(PACK_FORMAT, args.verbose, args.logging, args.sport, args.aport, args.cport)
+        import threading
+        revent=threading.Event()
+        cevent=threading.Event()
+        
+        #send via broadcast
+        server.sendto(message, ('<broadcast>', args.port))
+    else:
+        pass
 
 
-if __name__ == '__main__':
-    main()#TODO run as subprocess and relaunch after normal exit-> multi try run or maybe until x viable runs succeded, maybe also Stop Multicast at this level bat shutting down non controllers
