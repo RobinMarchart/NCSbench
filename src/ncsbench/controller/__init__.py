@@ -9,13 +9,13 @@ import time
 import numpy as np
 from scipy import io
 from threading import Event
-from timeit import Timer
+from multiprocessing import Queue
 
-import common.packet as packet
-import common.control_socket as control
-import common.params as p
-import controller.controller_filter as f
-import controller.controller_socket as cs
+import ncsbench.common.packet as packet
+import ncsbench.common.socket as control
+import ncsbench.common.params as p
+import ncsbench.controller.controller_filter as f
+import ncsbench.controller.controller_socket as cs
 
 
 class Controller:
@@ -27,7 +27,7 @@ class Controller:
     # Threshold angle at which the controller kicks in
     start_threshold = 0.0
 
-    def __init__(self, ip_address, aport, sport, measurement_folder,csock:control.ControllerSocket):
+    def __init__(self, ip_address, aport, sport, measurement_folder,csock:control.ControllerWorkerReceiver):
         self.ref_vec =np.array([[0], [0], [0], [0], [0], [0], [0]])
         self.controller_socket = cs.ControllerSocket(ip_address, aport, sport, measurement_folder)
         self.filter = f.Filter()
@@ -61,7 +61,7 @@ class Controller:
         seq_number_last = 0
         start_actuation = False
         first_packet = True
-        logging.info("Controller started. Waitig for packets from the Robot.")
+        logging.info("Controller started. Waiting for packets from the Robot.")
         while True:
             data = self.controller_socket.receive()
             if data:
@@ -131,7 +131,7 @@ class Controller:
 
         :param A_discreteSys:             state space matrix
         :param B_discreteSys:             state space matrix
-        :param x0:                        inital states
+        :param x0:                        initial states
         :param sim_steps:                 number of steps to be simulated
         :param motorVoltageApplied_left:  voltage applied at the moment of the measurement at the robot
         :param motorVoltageApplied_right: voltage applied at the moment of the measurement at the robot
@@ -158,7 +158,7 @@ class Controller:
 
         :param A_discreteSys:             state space matrix
         :param B_discreteSys:             state space matrix
-        :param x0:                        inital states array
+        :param x0:                        initial states array
         :param ref_vec:                   reference states array
         :param motorVoltageApplied_left:  voltage applied at the moment of measurement at the robot
         :param motorVoltageApplied_right: voltage applied at the moment of measurement at the robot
@@ -216,20 +216,17 @@ class Controller:
 
 controller = None
 
-def main(args):
-
+def main(args,queue:Queue,debugging:bool):
+    if debugging:
+        breakpoint()
     # Configure logging
     logger = logging.getLogger()
     if args.verbose:
         logger.setLevel(logging.DEBUG)
     else:
         logger.setLevel(logging.INFO)
-    e1=Event()
-    e2=Event()
-    s=control.ControllerSocket(args.cport,e1,e2,args.result_folder)
-    e1.wait()
-    e2.wait()
-    del e1,e2
+    
+    s=control.ControllerWorkerReceiver(queue)
     args.address=s.types[control.CLIENTS.ROBOT].addr
 
     logging.debug("IP address of the application: %s", args.address)

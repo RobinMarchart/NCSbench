@@ -4,6 +4,8 @@ import struct
 import argparse
 import time
 import json
+import multiprocessing
+import ncsbench.common.socket as com_socket
 # verbose logging (copy_logfile) sport aport cport
 PACK_FORMAT = '!2?3I'
 
@@ -29,12 +31,6 @@ def serve(port, verbose, logging, sport, aport, cport):
     while True:
         server.sendto(message, ('<broadcast>', port))
         time.sleep(10)
-def ctrl(args):
-    from threading import Thread
-    Thread(target=serve, args=(args.port, args.verbose, args.logging,
-                               args.sport, args.aport, args.cport),daemon=False).start()
-    from controller import main as m
-    Thread(target=m,args=(args,)).start()
 
 def client(args):
     from importlib import import_module
@@ -58,7 +54,7 @@ def crn(args):
     from crane import run
     run(args)
 
-def main():
+def main(debugging=False):
     try:
         settings = json.load(open("settings.json", "r"))
     except FileNotFoundError:
@@ -71,7 +67,8 @@ def main():
             "--aport":{"default":34544,"type":int},
             "--cport":{"default":34545,"type":int},
             "--measurement_folder":{"default":".",'help':'Subfolder for measurements'},
-            "--result_folder":{"default":".."}
+            "--result_folder":{"default":".."},
+            "runs":{"default":1,"type":int}
         },
         "robot":{"--type":{"default":"ev3"},
             "--motor_l_port":{"default":"B","choices":["A","B","C","D"]},
@@ -124,10 +121,26 @@ def main():
         message = struct.pack(PACK_FORMAT, args.verbose, args.logging, args.sport, args.aport, args.cport)
         import threading
         revent=threading.Event()
-        cevent=threading.Event()
         
         #send via broadcast
-        server.sendto(message, ('<broadcast>', args.port))
+        def broadcast_send(server,message,port):
+            server.sendto(message, ('<broadcast>', port))
+        broadcast=threading.Thread(target=broadcast_send,args=(server,message,args.port))
+
+        event=threading.Event()
+
+        con_socket=com_socket.ControllerSocket(args.cport,args.result_folder,event)
+
+        event.wait()
+        del event
+
+        from ncsbench.controller import main as controller_main
+        for x in range(args.runs):
+            worker=multiprocessing.Process(target=controller_main,args=(args,con_socket.queue,debugging))
+            worker.start()
+            worker.join()
+        con_socket.send(com_socket.EVENTS.ERR,com_socket.CLIENTS.ROBOT)
+        con_socket.send(com_socket.EVENTS.ERR,com_socket.CLIENTS.CLIENT)
     else:
         pass
 

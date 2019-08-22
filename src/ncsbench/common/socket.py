@@ -17,12 +17,12 @@ EVENTS = enum.IntEnum(
 CLIENTS = enum.IntEnum('CLIENTS', 'ROBOT CRANE')
 
 class ClientMessage:
-    def __init__(self, event_type:EVENTS, message:bool):
+    def __init__(self, event_type:EVENTS, message):
         self.type=event_type
         self.message=message
 
 class ControllerMessage:
-    def __init__(self, event_type:EVENTS, message:bool, client:CLIENTS):
+    def __init__(self, event_type:EVENTS, messages, client:CLIENTS):
         self.type=event_type
         self.message=message
         self.client=client
@@ -115,7 +115,7 @@ class ControllSocket:
 
 
 def _client_shutdown_hook(s):
-    s.send(EVENTS.EXIT)
+    s.send(EVENTS.ERR)
     s.close()
 #TODO exit on connection lost - ping continuesly
 
@@ -127,7 +127,8 @@ class ClientSocket(ControllSocket):
         self.lock = threading.Lock()
         self.controller = controller
         self.sock.connect(self.controller)
-        self.queue=multiprocessing.Queue()
+        self.queue_O=multiprocessing.Queue()
+        self.queue_I=multiprocessing.Queue()
 
         atexit.register(_client_shutdown_hook, self)
 
@@ -145,7 +146,7 @@ class ClientSocket(ControllSocket):
         self.event[EVENTS.EXIT].always.add(shutdown)
     
     def handle_incomeing(self, data, addr, event_type):
-        queue.put(ClientMessage(event_type,data))
+        queue_I.put(ClientMessage(event_type,data))
 
     def send(self, event, data=b''):
         with self.lock:
@@ -194,16 +195,16 @@ def _controller_shutdown_hook(s):
 
 
 class ControllerSocket(ControllSocket):
-    def __init__(self, cport,r_event:threading.Event,c_event:threading.Event,result_folder):
+    def __init__(self, cport,result_folder,connected:threading.Event):
         super().__init__()
         self.sock.bind(("", cport))
         self.sock.listen()
         self.clients = dict()
         self.addresses=[]
-        self.r_event=r_event
-        self.c_event=c_event
         self.result_folder=result_folder
-        self.queue=multiprocessing.Queue()
+        self.queue_I=multiprocessing.Queue()
+        self.queue_O=multiprocessing.Queue()
+        self.connected=connected
 
         def recv_loop(sock, client):
             while True:
@@ -216,34 +217,39 @@ class ControllerSocket(ControllSocket):
                 threading.Thread(target=recv_loop, args=(
                     sock, c), daemon=True).start()
 
-        threading.Thread(target=accept_loop, args=(self,), daemon=True).start()
-
         atexit.register(_controller_shutdown_hook, self)
 
-        def shutdown(data, addr, sock):
+        def shutdown_err(data, addr, sock):
             atexit.unregister(_controller_shutdown_hook)
             for client in sock.clients:
                 if not client.addr == addr:
                     sock.send(EVENTS.EXIT, client)
             sock.close()
-            exit()
+            exit(1)
 
-        self.event[EVENTS.EXIT].always.add(shutdown)
+        self.event[EVENTS.ERR].always.add(shutdown_err)
 
         def init(data, addr, sock):
             t = data[0]
             c = sock.clients[addr]
             sock.addresses.insert(t,addr)
             c.type = t
-            if t==CLIENTS.ROBOT:
-                sock.r_event.set()
-            else:
-                sock.c_event.set()
+            if len(self.addresses)==len(CLIENTS):
+                self.connected.set()
+                del self.connected
 
         self.event[EVENTS.INIT].always.add(init)
 
+        threading.Thread(target=accept_loop, args=(self,), daemon=True).start()
+
+        def client_loop(q,s):
+            while True:
+                e=q.get()
+                s.send(e.type,e.client,e.message)
+        threading.Thread(target=client_loop,args=(self.queue_O,self),daemon=True)
+
     def handle_incomeing(self, data, addr, event_type):
-        self.put(ControllerMessage(event_type,data,self.clients[addr].type))
+        self.queue_I.put(ControllerMessage(event_type,data,self.clients[addr].type))
 
     def close(self):
         super().close()
@@ -284,10 +290,15 @@ class ClientWorkerReceiver:
                 e[n.type].notice(e.message)
 
 class ControllerWorkerReceiver:
-    def __init__(self, queue):
-        self.queue=queue
+    def __init__(self, queue_I,queue_O):
+        self.queue_I=queue_I
+        self.queue_O=queue_O
         self.events=[[ReceiverEvent(e)for e in list(EVENTS)]for c in list(CLIENTS)]
         def f(q,e):
             while True:
                 n=q.get()
                 e[n.client][n.type].notice(e.message)
+        threading.Thread(target=f,args=(self.queue_I,self.events),daemon=True).start()
+    
+    def send(self,event_type,message,client):
+        self.queue_O.put(ControllerMessage(event_type,message,client))
