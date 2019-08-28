@@ -5,6 +5,8 @@ import argparse
 import time
 import json
 import multiprocessing
+import pathlib
+import os
 import ncsbench.common.socket as com_socket
 # verbose logging (copy_logfile) sport aport cport
 PACK_FORMAT = '!2?3I'
@@ -55,10 +57,6 @@ def crn(args):
     run(args)
 
 def main(debugging=False):
-    try:
-        settings = json.load(open("settings.json", "r"))
-    except FileNotFoundError:
-        settings = {}
     defaults ={
         "controller":{
             "--verbose":{"default":False,"type":int,"choices":["0","1"]},
@@ -68,9 +66,11 @@ def main(debugging=False):
             "--cport":{"default":34545,"type":int},
             "--measurement_folder":{"default":".",'help':'Subfolder for measurements'},
             "--result_folder":{"default":".."},
+            "--port":{"default":5555,"type":int},
             "runs":{"default":1,"type":int}
         },
         "robot":{"--type":{"default":"ev3"},
+            "--port":{"default":5555,"type":int},
             "--motor_l_port":{"default":"B","choices":["A","B","C","D"]},
             "--motor_r_port":{"default":"A","choices":["A","B","C","D"]},
             "--touch_1_port":{"default":"1","choices":["1","2","3","4"]},
@@ -78,30 +78,33 @@ def main(debugging=False):
             "--gyro_port":{"default":"4","choices":["1","2","3","4"]}
             },
         "crane":{"--type":{"default":"ev3"},
+            "--port":{"default":5555,"type":int},
             "--motor_port":{"default":"A","choices":["A","B","C","D"]}}
     }
+    try:
+        settings = json.load(open(os.path.expanduser("~/.NCSbench.json"), "r"))
+    except FileNotFoundError:
+        settings = {}
+        for key in defaults:
+            settings[key]={}
     changed = False
-    if not "port" in settings:
-        settings["port"] = 5555
-        changed = True
+    for k in defaults:
+        a=defaults[k]
+        for key in a:
+            if (not key in settings[k]) and ("default" in a[key]):
+                settings[k][key]=a[key]["default"]
+                changed=True
+            else:
+                a[key]["default"]=settings[k][key]
     parser = argparse.ArgumentParser()
-    parser.add_argument("--port", type=int, default=settings["port"])
-    parser.add_argument("command", choices=defaults)
     parser.add_argument("--override", action="store_true")
-    args = parser.parse_known_args()
-    a1,a2=args
-    a=defaults[a1.command]
-    parser=argparse.ArgumentParser()
-    for key in a:
-        if (not key in settings) and ("default" in a[key]):
-            settings[key]=a[key]["default"]
-            changed=True
-        else:
-            a[key]["default"]=settings[key]
-        parser.add_argument(key,**a[key])
-    args=a2,a1
-    args = parser.parse_args(*args)
-        
+    subparsers = parser.add_subparsers(required=True,dest="cmd")
+    for k in settings:
+        if not k in []:
+            p=subparsers.add_parser(k)
+            for parse in settings[k]:
+                p.add_argument(parse,**defaults[k][parse])
+    args = parser.parse_args()
     
     if args.override:
         for key in settings:
@@ -110,9 +113,11 @@ def main(debugging=False):
                     settings[key] = args.__dict__[key]
                     changed = True
     if changed:
-        json.dump(settings,open("settings.json","w"),indent=4)
+        path=pathlib.Path(os.path.expanduser("~/.NCSbench.json"))
+        path.open("a").close()
+        json.dump(settings,path.open("w"),indent=4)
     
-    if args.command =="controller":
+    if args.cmd =="controller":
         server = socket.socket(
             socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
         server.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
