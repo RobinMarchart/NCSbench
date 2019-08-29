@@ -143,7 +143,7 @@ class ClientSocket(ControllSocket):
             sock.close()
             exit()
 
-        self.event[EVENTS.EXIT].always.add(shutdown)
+        self.event[EVENTS.ERR].always.add(shutdown)
     
     def handle_incomeing(self, data, addr, event_type):
         queue_I.put(ClientMessage(event_type,data))
@@ -169,19 +169,6 @@ class RobotSocket(ClientSocket):
 class CraneSocket(ClientSocket):
     def __init__(self, controller,daemon=True):
         super().__init__(controller,daemon)
-        import ncsbench.crane as crane
-
-        def up(data, addr, self):
-            crane.up()
-        self.event[EVENTS.CRANE_UP].always.add(up)
-
-        def stop(data, addr, sock):
-            crane.stop()
-        sock.event[EVENTS.CRANE_STOP].always.add(stop)
-
-        def down(data, addr, sock):
-            crane.down()
-        sock.event[EVENTS.CRANE_DOWN].always.add(down)
 
     def init(self):
         super().init(CLIENTS.CRANE)
@@ -281,13 +268,18 @@ class ReceiverEvent:
         self.event.clear()
 
 class ClientWorkerReceiver:
-    def __init__(self, queue):
-        self.queue=queue
+    def __init__(self, queue_I,queue_O):
+        self.queue_I=queue_I
+        self.queue_O=queue_O
         self.events=[ReceiverEvent(e)for e in list(EVENTS)]
         def f(q,e):
             while True:
                 n=q.get()
                 e[n.type].notice(e.message)
+        threading.Thread(target=f,args=(self.queue_I,self.events))
+
+    def send(self,event_type,message):
+        self.queue_O.put(ClientMessage(event_type,message))
 
 class ControllerWorkerReceiver:
     def __init__(self, queue_I,queue_O):

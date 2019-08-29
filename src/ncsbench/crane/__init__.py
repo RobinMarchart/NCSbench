@@ -1,4 +1,5 @@
 import atexit
+import ncsbench.common.socket as s
 
 EV3 = None
 MOTOR = None
@@ -17,6 +18,10 @@ def run(args):
         raise Exception("No motor connected")
     MOTOR.polarity = 'inversed'
     atexit.register(stop_coast)
+    args.sock.events[s.EVENTS.CRANE_STOP].always.add(lambda data:stop())
+    args.sock.events[s.EVENTS.CRANE_UP].always.add(lambda data:up())
+    args.sock.events[s.EVENTS.CRANE_DOWN].always.add(lambda data:down())
+    args.sock.events[s.EVENTS.EXIT].always.add(lambda data:exit(0))
 
 def stop():
     MOTOR.stop(stop_action='hold')

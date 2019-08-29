@@ -22,40 +22,6 @@ def rcv(port):
 
 #   const int  bool    bool    int   int   int
 
-
-def serve(port, verbose, logging, sport, aport, cport):
-    server = socket.socket(
-        socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
-    server.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-    server.settimeout(0.2)
-    server.bind(("", port+1))
-    message = struct.pack(PACK_FORMAT, verbose, logging, sport, aport, cport)
-    while True:
-        server.sendto(message, ('<broadcast>', port))
-        time.sleep(10)
-
-def client(args):
-    from importlib import import_module
-    args.lib = import_module("ev3dev."+args.type)
-    addr, d = rcv(args.port)
-    args.address = addr[0]
-    verbose, logging, sport, aport, cport = d
-    args.verbose = verbose
-    args.logging = logging
-    args.sport = sport
-    args.aport = aport
-    args.cport = cport
-
-def rbt(args):
-    client(args)
-    from robot import run
-    run(args)
-
-def crn(args):
-    client(args)
-    from crane import run
-    run(args)
-
 def main(debugging=False):
     defaults ={
         "controller":{
@@ -147,6 +113,28 @@ def main(debugging=False):
         con_socket.send(com_socket.EVENTS.ERR,com_socket.CLIENTS.ROBOT)
         con_socket.send(com_socket.EVENTS.ERR,com_socket.CLIENTS.CLIENT)
     else:
-        pass
+        from importlib import import_module
+        args.lib = import_module("ev3dev."+args.type)
+        addr, d = rcv(args.port)
+        args.address = addr[0]
+        verbose, logging, sport, aport, cport = d
+        args.verbose = verbose
+        args.logging = logging
+        args.sport = sport
+        args.aport = aport
+        args.cport = cport
+        if args.cmd=="robot":
+            pass
+        elif args.cmd=="crane":
+            con_socket=com_socket.CraneSocket((args.address,args.cport))
+            def run_crane(args,queue_I,queue_O):
+                args.sock=com_socket.ClientWorkerReceiver(queue_I,queue_O)
+                from ncsbench.crane import run
+                run(args)
+            con_socket.init()
+            while True:
+                process=multiprocessing.Process(target=run_crane,args=(args,con_socket.queue_I,con_socket.queue_O))
+                process.start()
+                process.join()
 
 
