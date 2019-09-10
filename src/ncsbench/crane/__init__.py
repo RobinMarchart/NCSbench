@@ -1,21 +1,25 @@
 import atexit
 import ncsbench.common.socket as s
+from ..common.ev3utils import init as ev3_dict_init
 
 EV3 = None
 MOTOR = None
 
 def run(args):
     global EV3, MOTOR
-    EV3=args.type
-    for port in [EV3.OUTPUT_A, EV3.OUTPUT_B, EV3.OUTPUT_C, EV3.OUTPUT_D]:
-        
-        m = EV3.MediumMotor(port)
-        if m.connected:
-            global MOTOR
-            MOTOR = m
-            break
+    EV3=args.lib
+    if args.type=="pistorms":
+        print("unsupported platform: pistorms")
+        print("\tstopping...")
+        exit(1)
+    m = EV3.MediumMotor(ev3_dict_init(args).motors[args.motor_port])
+    if m.connected:
+        global MOTOR
+        MOTOR = m
     if not MOTOR:
-        raise Exception("No motor connected")
+        print("couldnt find Motor on port "+args.motor_port)
+        print("\tstopping...")
+        exit(1)
     MOTOR.polarity = 'inversed'
     atexit.register(stop_coast)
     args.sock.events[s.EVENTS.CRANE_STOP].always.add(lambda data:stop())

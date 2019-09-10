@@ -144,6 +144,15 @@ class ClientSocket(ControllSocket):
             exit()
 
         self.event[EVENTS.ERR].always.add(shutdown)
+        def client_loop(q,s):
+            while True:
+                e=q.get()
+                s.send(e.type,e.message)
+                if(e.type==EVENTS.ERR):
+                    print("error in subprocess")
+                    print("\tstopping...")
+                    exit(1)
+        threading.Thread(target=client_loop,args=(self.queue_O,self),daemon=True)
     
     def handle_incomeing(self, data, addr, event_type):
         queue_I.put(ClientMessage(event_type,data))
@@ -233,6 +242,10 @@ class ControllerSocket(ControllSocket):
             while True:
                 e=q.get()
                 s.send(e.type,e.client,e.message)
+                if(e.type==EVENTS.ERR):
+                    print("error in subprocess")
+                    print("\tstopping...")
+                    exit(1)
         threading.Thread(target=client_loop,args=(self.queue_O,self),daemon=True)
 
     def handle_incomeing(self, data, addr, event_type):

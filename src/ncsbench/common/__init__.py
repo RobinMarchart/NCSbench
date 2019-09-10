@@ -7,10 +7,10 @@ import json
 import multiprocessing
 import pathlib
 import os
+import atexit
 import ncsbench.common.socket as com_socket
 # verbose logging (copy_logfile) sport aport cport
 PACK_FORMAT = '!2?3I'
-
 
 def rcv(port):
     client = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)  # UDP
@@ -22,56 +22,59 @@ def rcv(port):
 
 #   const int  bool    bool    int   int   int
 
+
 def main(debugging=False):
-    defaults ={
-        "controller":{
-            "--verbose":{"default":False,"type":int,"choices":["0","1"]},
-            "--logging":{"default":False,"type":int,"choices":["0","1"]},
-            "--sport":{"default":34543,"type":int},
-            "--aport":{"default":34544,"type":int},
-            "--cport":{"default":34545,"type":int},
-            "--measurement_folder":{"default":".",'help':'Subfolder for measurements'},
-            "--result_folder":{"default":".."},
-            "--port":{"default":5555,"type":int},
-            "runs":{"default":1,"type":int}
+    defaults = {
+        "controller": {
+            "--verbose": {"default": False, "type": int, "choices": ["0", "1"]},
+            "--logging": {"default": False, "type": int, "choices": ["0", "1"]},
+            "--sport": {"default": 34543, "type": int},
+            "--aport": {"default": 34544, "type": int},
+            "--cport": {"default": 34545, "type": int},
+            "--measurement_folder": {"default": ".", 'help': 'Subfolder for measurements'},
+            "--result_folder": {"default": ".."},
+            "--port": {"default": 5555, "type": int},
+            "runs": {"default": 1, "type": int}
         },
-        "robot":{"--type":{"default":"ev3"},
-            "--port":{"default":5555,"type":int},
-            "--motor_l_port":{"default":"B","choices":["A","B","C","D"]},
-            "--motor_r_port":{"default":"A","choices":["A","B","C","D"]},
-            "--touch_1_port":{"default":"1","choices":["1","2","3","4"]},
-            "--touch_2_port":{"default":"2","choices":["1","2","3","4"]},
-            "--gyro_port":{"default":"4","choices":["1","2","3","4"]}
-            },
-        "crane":{"--type":{"default":"ev3"},
-            "--port":{"default":5555,"type":int},
-            "--motor_port":{"default":"A","choices":["A","B","C","D"]}}
+        "robot": {
+            "--type": {"default": "ev3"},
+            "--port": {"default": 5555, "type": int},
+            "--motor_l_port": {"default": "B", "choices": ["A", "B", "C", "D"]},
+            "--motor_r_port": {"default": "A", "choices": ["A", "B", "C", "D"]},
+            "--touch_1_port": {"default": "1", "choices": ["1", "2", "3", "4"]},
+            "--touch_2_port": {"default": "2", "choices": ["1", "2", "3", "4"]},
+            "--gyro_port": {"default": "4", "choices": ["1", "2", "3", "4"]}
+        },
+        "crane": {
+            "--type": {"default": "ev3"},
+            "--port": {"default": 5555, "type": int},
+            "--motor_port": {"default": "A", "choices": ["A", "B", "C", "D"]}}
     }
     try:
         settings = json.load(open(os.path.expanduser("~/.NCSbench.json"), "r"))
     except FileNotFoundError:
         settings = {}
         for key in defaults:
-            settings[key]={}
+            settings[key] = {}
     changed = False
     for k in defaults:
-        a=defaults[k]
+        a = defaults[k]
         for key in a:
             if (not key in settings[k]) and ("default" in a[key]):
-                settings[k][key]=a[key]["default"]
-                changed=True
+                settings[k][key] = a[key]["default"]
+                changed = True
             else:
-                a[key]["default"]=settings[k][key]
+                a[key]["default"] = settings[k][key]
     parser = argparse.ArgumentParser()
     parser.add_argument("--override", action="store_true")
-    subparsers = parser.add_subparsers(required=True,dest="cmd")
+    subparsers = parser.add_subparsers(required=True, dest="cmd")
     for k in settings:
         if not k in []:
-            p=subparsers.add_parser(k)
+            p = subparsers.add_parser(k)
             for parse in settings[k]:
-                p.add_argument(parse,**defaults[k][parse])
+                p.add_argument(parse, **defaults[k][parse])
     args = parser.parse_args()
-    
+
     if args.override:
         for key in settings:
             if key in args.__dict__:
@@ -79,39 +82,51 @@ def main(debugging=False):
                     settings[key] = args.__dict__[key]
                     changed = True
     if changed:
-        path=pathlib.Path(os.path.expanduser("~/.NCSbench.json"))
+        path = pathlib.Path(os.path.expanduser("~/.NCSbench.json"))
         path.open("a").close()
-        json.dump(settings,path.open("w"),indent=4)
-    
-    if args.cmd =="controller":
+        json.dump(settings, path.open("w"), indent=4)
+
+    if args.cmd == "controller":
         server = socket.socket(
             socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
         server.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
         server.settimeout(0.2)
         server.bind(("", args.port+1))
-        message = struct.pack(PACK_FORMAT, args.verbose, args.logging, args.sport, args.aport, args.cport)
+        message = struct.pack(PACK_FORMAT, args.verbose,
+                              args.logging, args.sport, args.aport, args.cport)
         import threading
-        revent=threading.Event()
-        
-        #send via broadcast
-        def broadcast_send(server,message,port):
+        revent = threading.Event()
+
+        # send via broadcast
+        def broadcast_send(server, message, port):
             server.sendto(message, ('<broadcast>', port))
-        broadcast=threading.Thread(target=broadcast_send,args=(server,message,args.port))
+        broadcast = threading.Thread(
+            target=broadcast_send, args=(server, message, args.port))
 
-        event=threading.Event()
+        event = threading.Event()
 
-        con_socket=com_socket.ControllerSocket(args.cport,args.result_folder,event)
+        con_socket = com_socket.ControllerSocket(
+            args.cport, args.result_folder, event)
 
         event.wait()
         del event
 
         from ncsbench.controller import main as controller_main
         for x in range(args.runs):
-            worker=multiprocessing.Process(target=controller_main,args=(args,con_socket.queue,debugging))
+            worker = multiprocessing.Process(
+                target=controller_main, args=(args, con_socket.queue, debugging))
             worker.start()
+            f=lambda:worker.kill()
+            atexit.register(f)
             worker.join()
-        con_socket.send(com_socket.EVENTS.ERR,com_socket.CLIENTS.ROBOT)
-        con_socket.send(com_socket.EVENTS.ERR,com_socket.CLIENTS.CLIENT)
+            atexit.unregister(f)
+            if worker.exitcode!=0:
+                print("error in subprocess")
+                print("\tstopping...")
+                
+                exit(1)
+        con_socket.send(com_socket.EVENTS.ERR, com_socket.CLIENTS.ROBOT)
+        con_socket.send(com_socket.EVENTS.ERR, com_socket.CLIENTS.CLIENT)
     else:
         from importlib import import_module
         args.lib = import_module("ev3dev."+args.type)
@@ -123,18 +138,18 @@ def main(debugging=False):
         args.sport = sport
         args.aport = aport
         args.cport = cport
-        if args.cmd=="robot":
+        if args.cmd == "robot":
             pass
-        elif args.cmd=="crane":
-            con_socket=com_socket.CraneSocket((args.address,args.cport))
-            def run_crane(args,queue_I,queue_O):
-                args.sock=com_socket.ClientWorkerReceiver(queue_I,queue_O)
+        elif args.cmd == "crane":
+            con_socket = com_socket.CraneSocket((args.address, args.cport))
+
+            def run_crane(args, queue_I, queue_O):
+                args.sock = com_socket.ClientWorkerReceiver(queue_I, queue_O)
                 from ncsbench.crane import run
                 run(args)
             con_socket.init()
             while True:
-                process=multiprocessing.Process(target=run_crane,args=(args,con_socket.queue_I,con_socket.queue_O))
+                process = multiprocessing.Process(target=run_crane, args=(
+                    args, con_socket.queue_I, con_socket.queue_O))
                 process.start()
                 process.join()
-
-

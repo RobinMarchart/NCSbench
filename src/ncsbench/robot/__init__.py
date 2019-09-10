@@ -8,10 +8,10 @@ import os
 import traceback
 import atexit
 from threading import Event
-import common.params as p
-import common.control_socket as controll_socket
+import ncsbench.common.params as p
+import ncsbench.common.socket as controll_socket
 
-import common.packet as packet
+import ncsbench.common.packet as packet
 
 ev3 = None
 
