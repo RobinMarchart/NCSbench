@@ -7,12 +7,13 @@ import struct
 import pathlib
 import typing
 import multiprocessing
+import time
 class SocketAlreadyExistsException(Exception):
     pass
 
 
 EVENTS = enum.IntEnum(
-    'EVENTS', 'EXIT ERR INIT CRANE_UP CRANE_STOP CRANE_DOWN ROBOT_CALLIB ROBOT_START ROBOT_STOP CONTINUE')
+    'EVENTS', 'EXIT ERR INIT CRANE_UP CRANE_STOP CRANE_DOWN ROBOT_CALLIB ROBOT_START ROBOT_STOP CONTINUE PING')
 CLIENTS = enum.IntEnum('CLIENTS', 'ROBOT CRANE')
 
 class ClientMessage:
@@ -65,9 +66,10 @@ class ControllSocket:
         self.sock = socket.socket()
         self.event = list()
         for x in EVENTS:
-            while(x > len(self.event)):
-                self.event.append(None)
-            self.event.append(Event(x))
+            if x != EVENTS.PING:
+                while(x > len(self.event)):
+                    self.event.append(None)
+                self.event.append(Event(x))
 
     def _send(self, event, data, sock):
         if len(data) < 2048:
@@ -105,7 +107,8 @@ class ControllSocket:
                     datan = sock.recv(2048)
                     type = datan[0]
                     data.extend(datan[1:])
-            self.event[type].notice(data, addr, self)
+            if type!=EVENTS.PING:
+                self.event[type].notice(data, addr, self)
 
         except Exception:
             traceback.print_exc()
@@ -117,7 +120,6 @@ class ControllSocket:
 def _client_shutdown_hook(s):
     s.send(EVENTS.ERR)
     s.close()
-#TODO exit on connection lost - ping continuesly
 
 
 class ClientSocket(ControllSocket):
@@ -247,6 +249,14 @@ class ControllerSocket(ControllSocket):
                     print("\tstopping...")
                     exit(1)
         threading.Thread(target=client_loop,args=(self.queue_O,self),daemon=True)
+        def ping(sock):
+            try:
+                while True:
+                    time.sleep(1)
+                    sock.send(CLIENTS.ROBOT,EVENTS.PING)
+                    sock.send(CLIENTS.CRANE,EVENTS.PING)
+            #TODO set timeout and exit at timeout?
+
 
     def handle_incomeing(self, data, addr, event_type):
         self.queue_I.put(ControllerMessage(event_type,data,self.clients[addr].type))
