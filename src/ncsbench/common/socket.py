@@ -7,7 +7,6 @@ import struct
 import pathlib
 import typing
 import multiprocessing
-
 class SocketAlreadyExistsException(Exception):
     pass
 
@@ -22,7 +21,7 @@ class ClientMessage:
         self.message=message
 
 class ControllerMessage:
-    def __init__(self, event_type:EVENTS, messages, client:CLIENTS):
+    def __init__(self, event_type:EVENTS, message, client:CLIENTS):
         self.type=event_type
         self.message=message
         self.client=client
@@ -55,12 +54,13 @@ class Client:
         self.lock = threading.Lock()
 
 sock=None
+
 class ControllSocket:
     def __init__(self):
-        if "sock" in globals():
+        global sock
+        if sock:
             raise SocketAlreadyExistsException()
         else:
-            global sock
             sock = self
         self.sock = socket.socket()
         self.event = list()
@@ -155,7 +155,7 @@ class ClientSocket(ControllSocket):
         threading.Thread(target=client_loop,args=(self.queue_O,self),daemon=True)
     
     def handle_incomeing(self, data, addr, event_type):
-        queue_I.put(ClientMessage(event_type,data))
+        self.queue_I.put(ClientMessage(event_type,data))
 
     def send(self, event, data=b''):
         with self.lock:

@@ -79,16 +79,16 @@ def init_sensors():
 
     if argv.type=="pistorms":
         import common.pistorms_util as pi_util
-        pi_util.set_gyro(sensors[argv.gyro_port])
-        pi_util.set_touch(sensors[argv.touch_1_port])
-        pi_util.set_touch(sensors[argv.touch_2_port])
+        pi_util.set_gyro(argv.sensors[argv.gyro_port])
+        pi_util.set_touch(argv.sensors[argv.touch_1_port])
+        pi_util.set_touch(argv.sensors[argv.touch_2_port])
     
-    gyroSensor = ev3.GyroSensor(sensors[argv.gyro_port])
+    gyroSensor = ev3.GyroSensor(argv.sensors[argv.gyro_port])
     gyroSensor.mode = gyroSensor.MODE_GYRO_RATE
-    touch1=ev3.TouchSensor(sensors[argv.touch_1_port])
-    touch2=ev3.TouchSensor(sensors[argv.touch_2_port])
-    motorLeft = ev3.LargeMotor(motors[argv.motor_l_port])
-    motorRight = ev3.LargeMotor(motors[argv.motor_r_port])
+    touch1=ev3.TouchSensor(argv.sensors[argv.touch_1_port])
+    touch2=ev3.TouchSensor(argv.sensors[argv.touch_2_port])
+    motorLeft = ev3.LargeMotor(argv.motors[argv.motor_l_port])
+    motorRight = ev3.LargeMotor(argv.motors[argv.motor_r_port])
 
     # Open sensor and motor files
     gyroSensorValueRaw = open(gyroSensor._path + "/value0", "rb")
@@ -134,8 +134,8 @@ def init_actuators():
 
     :return: Gyro and EV3Motors instances
     """
-    motorLeft = ev3.LargeMotor(motors[argv.motor_l_port])
-    motorRight = ev3.LargeMotor(motors[argv.motor_l_port])
+    motorLeft = ev3.LargeMotor(argv.motors[argv.motor_l_port])
+    motorRight = ev3.LargeMotor(argv.motors[argv.motor_l_port])
 
     # Reset the motors
     motorLeft.reset()
@@ -443,19 +443,12 @@ def main(ts, c_addr, s_port, a_port, c_port, log_enabled):
 
 finished=False
 
-motors={}
-
-sensors={}
-
 argv=None
 
 def run(args):
-    global ev3,motors,sensors,argv
+    global ev3,argv
     argv=args
-    import importlib
-    ev3 = importlib.import_module(args.type,"ev3dev") 
-    motors={"A":ev3.OUTPUT_A,"B":ev3.OUTPUT_B,"C":ev3.OUTPUT_C,"D":ev3.OUTPUT_D}
-    sensors={"1":ev3.INPUT_1,"2":ev3.INPUT_2,"3":ev3.INPUT_3,"4":ev3.INPUT_4}
+    ev3 = args.lib
     logger = logging.getLogger()
     if args.verbose:
         logger.setLevel(logging.DEBUG)

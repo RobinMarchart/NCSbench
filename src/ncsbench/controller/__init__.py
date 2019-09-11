@@ -5,6 +5,9 @@ import datetime
 import argparse
 import logging
 import time
+import tempfile
+import pkgutil
+import os
 
 import numpy as np
 from scipy import io
@@ -50,7 +53,12 @@ class Controller:
         k = 0
         first_packet = True
         # Load matrices for system simulation from MATLAB file
-        dictionary = io.loadmat('controller_simulation_matrices')
+        name=""
+        with tempfile.NamedTemporaryFile(mode="w+b",delete=False,suffix=".mat") as t:
+            t.write(pkgutil.get_data("ncsbench",".mat"))
+            name=t.name
+        dictionary = io.loadmat(name)
+        os.unlink(name)
         A_d30 = dictionary['Ad_30']
         B_d30 = dictionary['Bd_30']
         A_d35 = dictionary['Ad_35']
@@ -216,7 +224,7 @@ class Controller:
 
 controller = None
 
-def main(args,queue:Queue,debugging:bool):
+def main(args,queue_I:Queue,queue_O,debugging:bool):
     if debugging:
         breakpoint()
     # Configure logging
@@ -226,8 +234,7 @@ def main(args,queue:Queue,debugging:bool):
     else:
         logger.setLevel(logging.INFO)
     
-    s=control.ControllerWorkerReceiver(queue)
-    args.address=s.types[control.CLIENTS.ROBOT].addr
+    s=control.ControllerWorkerReceiver(queue_I,queue_O)
 
     logging.debug("IP address of the application: %s", args.address)
 

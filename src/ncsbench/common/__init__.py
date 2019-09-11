@@ -1,5 +1,5 @@
 
-import socket
+import socket as b_socket
 import struct
 import argparse
 import time
@@ -13,8 +13,8 @@ import ncsbench.common.socket as com_socket
 PACK_FORMAT = '!2?3I'
 
 def rcv(port):
-    client = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)  # UDP
-    client.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+    client = b_socket.socket(b_socket.AF_INET, b_socket.SOCK_DGRAM)  # UDP
+    client.setsockopt(b_socket.SOL_SOCKET, b_socket.SO_BROADCAST, 1)
     client.bind(("", port))
     while True:
         data, addr = client.recvfrom(1024)
@@ -87,49 +87,68 @@ def main(debugging=False):
         json.dump(settings, path.open("w"), indent=4)
 
     if args.cmd == "controller":
-        server = socket.socket(
-            socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
-        server.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+        server = b_socket.socket(
+            b_socket.AF_INET, b_socket.SOCK_DGRAM, b_socket.IPPROTO_UDP)
+        server.setsockopt(b_socket.SOL_SOCKET, b_socket.SO_BROADCAST, 1)
         server.settimeout(0.2)
         server.bind(("", args.port+1))
         message = struct.pack(PACK_FORMAT, args.verbose,
                               args.logging, args.sport, args.aport, args.cport)
         import threading
-        revent = threading.Event()
 
         # send via broadcast
-        def broadcast_send(server, message, port):
-            server.sendto(message, ('<broadcast>', port))
-        broadcast = threading.Thread(
-            target=broadcast_send, args=(server, message, args.port))
+        def broadcast_send(server, message, port,event):
+            with server:
+                while not event.is_set():
+                    server.sendto(message, ('<broadcast>', port))
 
         event = threading.Event()
 
+        broadcast = threading.Thread(
+            target=broadcast_send, args=(server, message, args.port))
+
         con_socket = com_socket.ControllerSocket(
             args.cport, args.result_folder, event)
-
-        event.wait()
-        del event
-
+        del event, server,message
+        broadcast.join()
+        del broadcast
+        
+        args.address=con_socket.addresses[com_socket.CLIENTS.ROBOT].addr
         from ncsbench.controller import main as controller_main
+        class ExitHook:
+            indicator=True
+            worker=None
+            def unusable_exit(self):
+                if worker:
+                    self.indicator=False
+                    self.worker.kill()
+        exH=ExitHook()
+        con_socket.event[com_socket.EVENTS.EXIT].always.add(lambda data, addr, sock:int.from_bytes(data) or exH.unusable_exit())
         for x in range(args.runs):
             worker = multiprocessing.Process(
-                target=controller_main, args=(args, con_socket.queue, debugging))
+                target=controller_main, args=(args, con_socket.queue_I,con_socket.queue_O, debugging))
+            exH.indicator=True
+            exH.worker=worker
             worker.start()
             f=lambda:worker.kill()
             atexit.register(f)
             worker.join()
             atexit.unregister(f)
+            exH.worker=None
             if worker.exitcode!=0:
                 print("error in subprocess")
                 print("\tstopping...")
                 
                 exit(1)
+            if exH.indicator:
+                pass#TODO collect logs
+            
         con_socket.send(com_socket.EVENTS.ERR, com_socket.CLIENTS.ROBOT)
         con_socket.send(com_socket.EVENTS.ERR, com_socket.CLIENTS.CLIENT)
     else:
         from importlib import import_module
-        args.lib = import_module("ev3dev."+args.type)
+        import ncsbench.common.ev3utils as args.lib
+        args.lib.init(args.type)
         addr, d = rcv(args.port)
         args.address = addr[0]
         verbose, logging, sport, aport, cport = d
@@ -139,7 +158,19 @@ def main(debugging=False):
         args.aport = aport
         args.cport = cport
         if args.cmd == "robot":
-            pass
+            con_socket = com_socket.RobotSocket((args.address, args.cport))
+            def run_robot(args,queue_I,queue_O):
+                args.sock=com_socket.ClientWorkerReceiver(queue_I,queue_O)
+                from ncsbench.robot import run
+                run(args)
+            con_socket.init()
+            while True:
+                process=multiprocessing.Process(target=run_robot,args=(args,con_socket.queue_I,con_socket.queue_O))
+                process.start()
+                process.join()
+                if process.exitcode!=0:
+                    con_socket.send(com_socket.EVENTS.EXIT,process.exitcode.to_bytes())
+
         elif args.cmd == "crane":
             con_socket = com_socket.CraneSocket((args.address, args.cport))
 
