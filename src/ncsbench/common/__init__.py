@@ -147,7 +147,8 @@ def main(debugging=False):
         con_socket.send(com_socket.EVENTS.ERR, com_socket.CLIENTS.CLIENT)
     else:
         from importlib import import_module
-        import ncsbench.common.ev3utils as args.lib
+        import ncsbench.common.ev3utils as args_lib
+        args.lib=args_lib
         args.lib.init(args.type)
         addr, d = rcv(args.port)
         args.address = addr[0]
