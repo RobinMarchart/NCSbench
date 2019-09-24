@@ -255,8 +255,9 @@ class ControllerSocket(ControllSocket):
                     time.sleep(1)
                     sock.send(CLIENTS.ROBOT,EVENTS.PING)
                     sock.send(CLIENTS.CRANE,EVENTS.PING)
-            #TODO set timeout and exit at timeout?
-
+            except TimeoutError:
+                sock.send(CLIENTS.ROBOT,EVENTS.ERR)
+                sock.send(CLIENTS.CRANE,EVENTS.ERR)
 
     def handle_incomeing(self, data, addr, event_type):
         self.queue_I.put(ControllerMessage(event_type,data,self.clients[addr].type))
