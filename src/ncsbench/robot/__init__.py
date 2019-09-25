@@ -76,12 +76,6 @@ def init_sensors():
     :return: Gyro and EV3Motors instances
     """
     # Create EV3 resource objects
-
-    if argv.type=="pistorms":
-        import common.pistorms_util as pi_util
-        pi_util.set_gyro(argv.sensors[argv.gyro_port])
-        pi_util.set_touch(argv.sensors[argv.touch_1_port])
-        pi_util.set_touch(argv.sensors[argv.touch_2_port])
     
     gyroSensor = ev3.GyroSensor(argv.sensors[argv.gyro_port])
     gyroSensor.mode = gyroSensor.MODE_GYRO_RATE
