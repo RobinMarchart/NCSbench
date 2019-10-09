@@ -99,17 +99,18 @@ def main(debugging=False):
         # send via broadcast
         def broadcast_send(server, message, port,event):
             with server:
-                while not event.is_set():
+                while event.is_set():
                     server.sendto(message, ('<broadcast>', port))
 
         event = threading.Event()
 
         broadcast = threading.Thread(
-            target=broadcast_send, args=(server, message, args.port))
+            target=broadcast_send, args=(server, message, args.port,event))
 
         con_socket = com_socket.ControllerSocket(
             args.cport, args.result_folder, event)
         del event, server,message
+        broadcast.start()
         broadcast.join()
         del broadcast
         
