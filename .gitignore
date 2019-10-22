@@ -251,3 +251,4 @@ git-daemon-export-ok
 
 #programm output
 **/settings.json
+.python-version

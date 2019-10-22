@@ -31,10 +31,10 @@ def main(debugging=False):
             "--sport": {"default": 34543, "type": int},
             "--aport": {"default": 34544, "type": int},
             "--cport": {"default": 34545, "type": int},
-            "--measurement-folder": {"default": ".", 'help': 'Subfolder for measurements'},
-            "--result-folder": {"default": ".."},
+            "--measurement_folder": {"default": ".", 'help': 'Subfolder for measurements'},
+            "--result_folder": {"default": ".."},
             "--port": {"default": 5555, "type": int},
-            "--no-crane":{"action":"store_true"},
+            #"--no-crane":{"action":"store_true"},
             "runs": {"default": 1, "type": int}
         },
         "robot": {
