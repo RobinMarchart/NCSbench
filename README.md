@@ -4,6 +4,7 @@
 * [Step-by-step guide](https://github.com/tum-lkn/NCSbench/wiki/Step-by-step-NCS-benchmarking)
 
 ## Installation
-git clone https://github.com/RobinMarchart/NCSbench.git
-cd NCSbench
-source bootstrap.sh
+
+* clone repo
+* run `source bootstrap.sh`
+
