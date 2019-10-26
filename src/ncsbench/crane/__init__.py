@@ -6,6 +6,7 @@ EV3 = None
 MOTOR = None
 
 def run(args):
+    #TODO manually controlled crane
     global EV3, MOTOR
     EV3=args.lib
     if args.type=="pistorms":

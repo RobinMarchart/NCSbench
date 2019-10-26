@@ -35,6 +35,7 @@ class Controller:
         self.controller_socket = cs.ControllerSocket(ip_address, aport, sport, measurement_folder)
         self.filter = f.Filter()
         self.csock=csock
+        #TODO rework init sequence
         csock.send(control.EVENTS.CRANE_UP,csock.clients[control.CLIENTS.CRANE])
         csock.send(control.EVENTS.CRANE_STOP,csock.clients[control.CLIENTS.CRANE])
         csock.send(control.EVENTS.ROBOT_CALLIB,csock.clients[control.CLIENTS.ROBOT])

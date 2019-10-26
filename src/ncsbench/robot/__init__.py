@@ -15,6 +15,7 @@ import ncsbench.common.packet as packet
 
 ev3 = None
 
+#TODO meassure difference in inclination
 
 # ----------- Sensor Methods -----------------
 #gyro sensor:
