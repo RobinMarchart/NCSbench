@@ -49,7 +49,8 @@ def main(debugging=False):
         "crane": {
             "--type": {"default": "ev3"},
             "--port": {"default": 5555, "type": int},
-            "--motor_port": {"default": "A", "choices": ["A", "B", "C", "D"]}}
+            "--motor_port": {"default": "A", "choices": ["A", "B", "C", "D"]}},
+            #"--manual": {"action":"store_true"}
     }
     try:
         settings = json.load(open(os.path.expanduser("~/.NCSbench.json"), "r"))
@@ -131,6 +132,8 @@ def main(debugging=False):
                 target=controller_main, args=(args, con_socket.queue_I,con_socket.queue_O, debugging))
             exH.indicator=True
             exH.worker=worker
+            con_socket.ready[0].wait()
+            con_socket.ready[0].clear()
             worker.start()
             f=lambda:worker.kill()
             atexit.register(f)

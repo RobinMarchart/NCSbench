@@ -10,7 +10,6 @@ import atexit
 from threading import Event
 import ncsbench.common.params as p
 import ncsbench.common.socket as controll_socket
-
 import ncsbench.common.packet as packet
 
 ev3 = None
@@ -146,7 +145,7 @@ def init_actuators():
 # ----------- Main Loop -----------------
 
 
-def main(ts, c_addr, s_port, a_port, c_port, log_enabled):
+def main(ts, c_addr, s_port, a_port, c_port, log_enabled,c_sock):
     """ Main function called from __main__
     :param ts: Sampling period in milliseconds
     :param c_addr: IP address of the controller
@@ -180,23 +179,22 @@ def main(ts, c_addr, s_port, a_port, c_port, log_enabled):
 
     logging.debug("Initialized actuators")
 
-    c_sock = controll_socket.RobotSocket((c_addr, c_port))
-    def fun(data, addr, sock):
+    def stop_fun(data, addr, sock):
         global finished
         finished=True
-    c_sock.event[controll_socket.EVENTS.ROBOT_STOP].always.add()
-    c_sock.init()
+    c_sock.event[controll_socket.EVENTS.ROBOT_STOP].always.add(stop_fun)
     # wait for controller to respond
+    c_sock.send(controll_socket.EVENTS.READY)
     c_sock.event[controll_socket.EVENTS.ROBOT_CALLIB].wait()
 
     # Calibration
     gyroOffset = calibrate_gyro(gyroSensorValueRaw)
 
-    c_sock.send(controll_socket.EVENTS.ROBOT_START)
-    logging.info("Calibration done. Start the Controller and lift me!")
+    logging.info("Calibration done.")
     ev3.Sound.beep().wait()
     leds.set_color(leds.LEFT, leds.AMBER)
     leds.set_color(leds.RIGHT, leds.AMBER)
+    c_sock.send(controll_socket.EVENTS.ROBOT_START)
 
     # Initialization of the sensor sockets
     udp_socket_sensor = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -461,4 +459,4 @@ def run(args):
         SetDuty(motorDutyCycleFile_right, 0)
     atexit.register(at_exit)
 
-    main(p.SAMPLING_TIME, args.address, args.sport, args.aport, args.cport, args.logging)
+    main(p.SAMPLING_TIME, args.address, args.sport, args.aport, args.cport, args.logging,args.sock)

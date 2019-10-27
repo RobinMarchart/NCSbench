@@ -13,7 +13,7 @@ class SocketAlreadyExistsException(Exception):
 
 
 EVENTS = enum.IntEnum(
-    'EVENTS', 'EXIT ERR INIT CRANE_UP CRANE_STOP CRANE_DOWN ROBOT_CALLIB ROBOT_START ROBOT_STOP CONTINUE PING')
+    'EVENTS', 'EXIT ERR INIT CRANE_UP CRANE_STOP CRANE_DOWN ROBOT_CALLIB ROBOT_START ROBOT_STOP READY CONTINUE PING')
 CLIENTS = enum.IntEnum('CLIENTS', 'ROBOT CRANE')
 
 class ClientMessage:
@@ -203,6 +203,19 @@ class ControllerSocket(ControllSocket):
         self.queue_I=multiprocessing.Queue()
         self.queue_O=multiprocessing.Queue()
         self.connected=connected
+        self.ready=[threading.Event(),threading.Lock(),False]
+
+        #ready event handler
+        def ready_event(ready, data, addr, sock):
+            ready[1].acquire()
+            if ready[2]:
+                ready[0].set()
+                ready[2]=False
+            else:
+                ready[2]=True
+            ready[1].release()
+        
+        self.event[EVENTS.READY].always.add(lambda data,addr,sock:ready_event(self.ready,data,addr,sock))
 
         def recv_loop(sock, client):
             while True:

@@ -27,6 +27,7 @@ def run(args):
     args.sock.events[s.EVENTS.CRANE_UP].always.add(lambda data:up())
     args.sock.events[s.EVENTS.CRANE_DOWN].always.add(lambda data:down())
     args.sock.events[s.EVENTS.EXIT].always.add(lambda data:exit(0))
+    args.sock.send(s.EVENTS.READY)
 
 def stop():
     MOTOR.stop(stop_action='hold')
@@ -35,7 +36,7 @@ def up():
     MOTOR.run_forever(speed_sp=500, ramp_up_sp=10000)
 
 def down():
-    MOTOR.run_to_rel_pos(position_sp=-130, speed_sp=100, ramp_up_sp=0,stop_action='coast')
+    MOTOR.run_timed(time_sp=1, speed_sp=100, ramp_up_sp=0,stop_action='coast')
 
 def stop_coast():
     MOTOR.stop(stop_action='coast')

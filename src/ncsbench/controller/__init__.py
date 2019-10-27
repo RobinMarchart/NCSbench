@@ -11,7 +11,7 @@ import os
 
 import numpy as np
 from scipy import io
-from threading import Event
+from threading import Event,Thread
 from multiprocessing import Queue
 
 import ncsbench.common.packet as packet
@@ -37,11 +37,11 @@ class Controller:
         self.csock=csock
         #TODO rework init sequence
         csock.send(control.EVENTS.CRANE_UP,csock.clients[control.CLIENTS.CRANE])
-        csock.send(control.EVENTS.CRANE_STOP,csock.clients[control.CLIENTS.CRANE])
         csock.send(control.EVENTS.ROBOT_CALLIB,csock.clients[control.CLIENTS.ROBOT])
+        self.loop=Thread(target=lambda :self.control_loop())
+        self.loop.start()
         csock.event[control.EVENTS.ROBOT_START].wait()
         csock.send(control.EVENTS.CRANE_DOWN,csock.clients[control.CLIENTS.CRANE])
-
 
     def control_loop(self):
         """
@@ -244,7 +244,7 @@ def main(args,queue_I:Queue,queue_O,debugging:bool):
     try:
         global controller
         controller = Controller(args.address, args.aport, args.sport, args.measurement_folder,s)
-        controller.control_loop()
+        controller.loop.join()
     except KeyboardInterrupt:
         logging.info("Control loop stopped.")
         exit()
