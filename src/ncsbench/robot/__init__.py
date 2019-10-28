@@ -7,7 +7,7 @@ import logging
 import os
 import traceback
 import atexit
-from threading import Event
+from threading import Event, Thread
 import ncsbench.common.params as p
 import ncsbench.common.socket as controll_socket
 import ncsbench.common.packet as packet
@@ -145,7 +145,7 @@ def init_actuators():
 # ----------- Main Loop -----------------
 
 
-def main(ts, c_addr, s_port, a_port, c_port, log_enabled,c_sock):
+def main(ts, c_addr, s_port, a_port, c_port, log_enabled,c_sock,runtime):
     """ Main function called from __main__
     :param ts: Sampling period in milliseconds
     :param c_addr: IP address of the controller
@@ -194,6 +194,10 @@ def main(ts, c_addr, s_port, a_port, c_port, log_enabled,c_sock):
     ev3.Sound.beep().wait()
     leds.set_color(leds.LEFT, leds.AMBER)
     leds.set_color(leds.RIGHT, leds.AMBER)
+    def wait_for(f,t,*args):
+        time.sleep(t)
+        f(*args)
+    th=Thread(target=lambda :wait_for(stop_fun,runtime,None,None,None))
     c_sock.send(controll_socket.EVENTS.ROBOT_START)
 
     # Initialization of the sensor sockets
@@ -369,7 +373,7 @@ def main(ts, c_addr, s_port, a_port, c_port, log_enabled,c_sock):
                 if log_enabled:
 
                     f.close()
-                exit()
+                exit(0)
             if finished:
                 logging.info("Control loop finished.") 
                 leds.set_color(leds.LEFT, leds.RED)
@@ -459,4 +463,4 @@ def run(args):
         SetDuty(motorDutyCycleFile_right, 0)
     atexit.register(at_exit)
 
-    main(p.SAMPLING_TIME, args.address, args.sport, args.aport, args.cport, args.logging,args.sock)
+    main(p.SAMPLING_TIME, args.address, args.sport, args.aport, args.cport, args.logging,args.sock,args.runtime)

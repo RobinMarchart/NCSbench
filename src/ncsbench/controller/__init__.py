@@ -43,6 +43,7 @@ class Controller:
         csock.event[control.EVENTS.ROBOT_START].wait()
         csock.send(control.EVENTS.CRANE_DOWN,csock.clients[control.CLIENTS.CRANE])
 
+
     def control_loop(self):
         """
         Control loop method. Receives measurements,
