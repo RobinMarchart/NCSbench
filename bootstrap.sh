@@ -1,6 +1,5 @@
 if test -d ~/.pyenv
 then 
-    echo "pyenv already exists"
 export PYENV_ROOT="$HOME/.pyenv"
 export PATH="$PYENV_ROOT/bin:$PATH"
 else
@@ -14,11 +13,25 @@ sudo apt-get install --no-install-recommends -y make build-essential libssl-dev 
     
 export PYENV_ROOT="$HOME/.pyenv"
 export PATH="$PYENV_ROOT/bin:$PATH"
+fi
+openssl_version=$(openssl version | sed -n "s/^.*SSL\s*\(\S*\).*$/\1/p")
+
+if $COMPILE_SSL = true
+then 
+    echo "compiling openssl-1.1.1d"
+    if test -d /tmp/openssl-1.1.1d.tar.gz
+    then echo "using cached /tmp/openssl-1.1.1d.tar.gz"
+    else curl https://www.openssl.org/source/openssl-1.1.1d.tar.gz --output /tmp/openssl-1.1.1d.tar.gz
+    fi
+    pushd ~/.pyenv
+    tar -xz /tmp/openssl-1.1.1d.tar.gz
+
+fi
 
 pyenv install 3.7.5
 
 pyenv local 3.7.5
-fi
+
 
 
 if command -v pyenv 1>/dev/null 2>&1; then
