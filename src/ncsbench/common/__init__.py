@@ -103,8 +103,9 @@ def main(debugging=False):
         # send via broadcast
         def broadcast_send(server, message, port, event):
             with server:
-                while event.is_set():
+                while not event.is_set():
                     server.sendto(message, ('<broadcast>', port))
+                    time.sleep(1)
 
         event = threading.Event()
 
