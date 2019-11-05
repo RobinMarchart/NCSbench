@@ -35,7 +35,7 @@ def main(debugging=False):
             "--measurement_folder": {"default": ".", 'help': 'Subfolder for measurements'},
             "--result_folder": {"default": ".."},
             "--port": {"default": 5555, "type": int},
-            # "--no-crane":{"action":"store_true"},
+            "--nocrane":{"action":"store_true"},
             "runs": {"default": 1, "type": int},
             "runtime": {"default": 120, "type": int}
         },
@@ -113,7 +113,7 @@ def main(debugging=False):
             target=broadcast_send, args=(server, message, args.port, event))
 
         con_socket = com_socket.ControllerSocket(
-            args.cport, args.result_folder, event)
+            args.cport, args.result_folder, event,args.nocrane)
         del event, server, message
         broadcast.start()
         broadcast.join()

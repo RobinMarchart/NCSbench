@@ -30,18 +30,22 @@ class Controller:
     # Threshold angle at which the controller kicks in
     start_threshold = 0.0
 
-    def __init__(self, ip_address, aport, sport, measurement_folder,csock:control.ControllerWorkerReceiver):
+    def __init__(self, ip_address, aport, sport, measurement_folder,csock:control.ControllerWorkerReceiver,nocrane):
         self.ref_vec =np.array([[0], [0], [0], [0], [0], [0], [0]])
         self.controller_socket = cs.ControllerSocket(ip_address, aport, sport, measurement_folder)
         self.filter = f.Filter()
         self.csock=csock
-        #TODO rework init sequence
-        csock.send(control.EVENTS.CRANE_UP,csock.clients[control.CLIENTS.CRANE])
+        if nocrane:
+            input("Lift the robot and press enter")
+        else:
+            csock.send(control.EVENTS.CRANE_UP,csock.clients[control.CLIENTS.CRANE])
+            csock.events[control.EVENTS.CRANE_UP].wait()
         csock.send(control.EVENTS.ROBOT_CALLIB,csock.clients[control.CLIENTS.ROBOT])
         self.loop=Thread(target=lambda :self.control_loop())
         self.loop.start()
         csock.event[control.EVENTS.ROBOT_START].wait()
-        csock.send(control.EVENTS.CRANE_DOWN,csock.clients[control.CLIENTS.CRANE])
+        if not nocrane:
+            csock.send(control.EVENTS.CRANE_DOWN,csock.clients[control.CLIENTS.CRANE])
 
 
     def control_loop(self):
@@ -244,7 +248,7 @@ def main(args,queue_I:Queue,queue_O,debugging:bool):
     timenow = datetime.datetime.now()
     try:
         global controller
-        controller = Controller(args.address, args.aport, args.sport, args.measurement_folder,s)
+        controller = Controller(args.address, args.aport, args.sport, args.measurement_folder,s,args.nocrane)
         controller.loop.join()
     except KeyboardInterrupt:
         logging.info("Control loop stopped.")

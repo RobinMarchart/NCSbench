@@ -1,5 +1,6 @@
 import atexit
 import ncsbench.common.socket as s
+import time
 
 EV3 = None
 MOTOR = None
@@ -56,14 +57,19 @@ def run(args):
                 if state==State.Stop:
                     state=State.Null
         EV3.Button.on_enter=lambda state_n:stop_hook(state_n,state[0])
-        import time
         while not EV3.Button.backspace:
             EV3.Button.process()
             time.sleep(0.2)
 
     else:
         args.sock.events[s.EVENTS.CRANE_STOP].always.add(lambda data:stop())
-        args.sock.events[s.EVENTS.CRANE_UP].always.add(lambda data:up())#TODO timed up and response
+        def up_func():
+            up()
+            time.sleep(1)#wait until robot is up
+            #TODO fill in measured time
+            stop()
+            args.sock.send(s.EVENTS.CRANE_UP)
+        args.sock.events[s.EVENTS.CRANE_UP].always.add(lambda data:up_func())
         args.sock.events[s.EVENTS.CRANE_DOWN].always.add(lambda data:down())
         args.sock.events[s.EVENTS.EXIT].always.add(lambda data:exit(0))
         args.sock.send(s.EVENTS.READY)
