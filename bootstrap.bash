@@ -13,23 +13,30 @@ else
     export PYENV_ROOT="$HOME/.pyenv"
     export PATH="$PYENV_ROOT/bin:$PATH"
 fi
-openssl_version=$(openssl version | sed -n "s/^.*SSL\s*\(\S*\).*$/\1/p")
-
-echo "compiling openssl-1.1.1d"
-if test -d /tmp/openssl/openssl-1.1.1d.tar.gz; then
-    echo "using cached /tmp/openssl/openssl-1.1.1d.tar.gz"
-else
-    mkdir /tmp/openssl
-    curl https://www.openssl.org/source/openssl-1.1.1d.tar.gz --output /tmp/openssl/openssl-1.1.1d.tar.gz
+#openssl_version=$(openssl version | sed -n "s/^.*SSL\s*\(\S*\).*$/\1/p")
+if !test -e ~/.pyenv/openssl_compiled; then
+    if test -d ~/.pyenv/openssl; then
+        rm -rf ~/.pyenv/openssl
+    fi
+    if test -d ~/.pyenv/openssldir; then
+        rm -rf ~/.pyenv/openssldir
+    fi
+    echo "compiling openssl-1.1.1d"
+    if test -d /tmp/openssl/openssl-1.1.1d.tar.gz; then
+        echo "using cached /tmp/openssl/openssl-1.1.1d.tar.gz"
+    else
+        mkdir /tmp/openssl
+        curl https://www.openssl.org/source/openssl-1.1.1d.tar.gz --output /tmp/openssl/openssl-1.1.1d.tar.gz
+    fi
+    pushd /tmp/openssl
+    tar -xz -f openssl-1.1.1d.tar.gz
+    cd openssl-1.1.1d
+    ./config --prefix=$(realpath ~/.pyenv/openssl) --openssldir=$(realpath ~/.pyenv/openssldir)
+    make
+    make test
+    make install
+    popd
 fi
-pushd /tmp/openssl
-tar -xz -f openssl-1.1.1d.tar.gz
-cd openssl-1.1.1d
-./config --prefix=$(realpath ~/.pyenv/openssl) --openssldir=$(realpath ~/.pyenv/openssldir)
-make
-make test
-make install
-popd
 CFLAGS="-I$(realpath ~/.pyenv/openssl/include)"
 LDFLAGS="-L$(realpath ~/.pyenv/openssl/lib)"
 
