@@ -51,8 +51,9 @@ def main(debugging=False):
         "crane": {
             "--type": {"default": "ev3"},
             "--port": {"default": 5555, "type": int},
-            "--motor_port": {"default": "A", "choices": ["A", "B", "C", "D"]}},
+            "--motor_port": {"default": "A", "choices": ["A", "B", "C", "D"]},
             "--manual": {"action":"store_true"}
+        }
     }
     try:
         settings = json.load(open(os.path.expanduser("~/.NCSbench.json"), "r"))
@@ -64,7 +65,9 @@ def main(debugging=False):
     for k in defaults:
         a = defaults[k]
         for key in a:
-            if (not key in settings[k]) and ("default" in a[key]):
+            if not "default" in a[key]:
+                pass
+            elif not key in settings[k]:
                 settings[k][key] = a[key]["default"]
                 changed = True
             else:
@@ -72,10 +75,10 @@ def main(debugging=False):
     parser = argparse.ArgumentParser()
     parser.add_argument("--override", action="store_true")
     subparsers = parser.add_subparsers(required=True, dest="cmd")
-    for k in settings:
+    for k in defaults:
         if not k in []:
             p = subparsers.add_parser(k)
-            for parse in settings[k]:
+            for parse in defaults[k]:
                 p.add_argument(parse, **defaults[k][parse])
     args = parser.parse_args()
 
