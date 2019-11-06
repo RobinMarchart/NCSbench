@@ -33,9 +33,9 @@ if ! test -e ~/.pyenv/openssl_compiled; then
     cd openssl-1.1.1d
     ./config --prefix=$(realpath ~/.pyenv/openssl) --openssldir=$(realpath ~/.pyenv/openssldir)
     make
-    make test
     make install
     popd
+    touch ~/.pyenv/openssl_compiled
 fi
 CFLAGS="-I$(realpath ~/.pyenv/openssl/include)"
 LDFLAGS="-L$(realpath ~/.pyenv/openssl/lib)"
