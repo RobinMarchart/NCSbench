@@ -14,7 +14,7 @@ else
     export PATH="$PYENV_ROOT/bin:$PATH"
 fi
 #openssl_version=$(openssl version | sed -n "s/^.*SSL\s*\(\S*\).*$/\1/p")
-if !test -e ~/.pyenv/openssl_compiled; then
+if ! test -e ~/.pyenv/openssl_compiled; then
     if test -d ~/.pyenv/openssl; then
         rm -rf ~/.pyenv/openssl
     fi
