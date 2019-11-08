@@ -60,7 +60,7 @@ fi
 
 source activate NCSbench
 
-installed=python3 -m pip freeze
+installed=$(python3 -m pip freeze)
 
 if [[ $installed == *"wheel"* ]]; then
     pip install wheel
