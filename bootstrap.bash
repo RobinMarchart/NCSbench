@@ -44,6 +44,7 @@ LC_ALL="en_US.UTF-8"
 LDFLAGS="-L$(realpath ~)/.pyenv/openssl/lib -Wl,-rpath,$(realpath ~)/.pyenv/openssl/lib"
 
 if ! test -d ~/.pyenv/versions/3.7.5; then
+    CONFIGURE_OPTS="--with-openssl=$(realpath ~/.pyenv/openssl)"
     CFLAGS="-I$(realpath ~/.pyenv/openssl/include)"
     LDFLAGS="-L$(realpath ~/.pyenv/openssl/lib)"
     pyenv install 3.7.5
