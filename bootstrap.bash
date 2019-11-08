@@ -38,15 +38,13 @@ if ! test -e ~/.pyenv/openssl_compiled; then
     touch ~/.pyenv/openssl_compiled
 fi
 
-PATH=$HOME/openssl/bin:$PATH
-LD_LIBRARY_PATH=$HOME/openssl/lib
-LC_ALL="en_US.UTF-8"
-LDFLAGS="-L$(realpath ~)/.pyenv/openssl/lib -Wl,-rpath,$(realpath ~)/.pyenv/openssl/lib"
+export PATH=$HOME/openssl/bin:$PATH
+export LD_LIBRARY_PATH=$HOME/openssl/lib
+export LC_ALL="en_US.UTF-8"
+export LDFLAGS="-L$(realpath ~)/.pyenv/openssl/lib -Wl,-rpath,$(realpath ~)/.pyenv/openssl/lib"
 
 if ! test -d ~/.pyenv/versions/3.7.5; then
-    CONFIGURE_OPTS="--help --with-openssl=$(realpath ~/.pyenv/openssl)"
-    CFLAGS="-I$(realpath ~/.pyenv/openssl/include)"
-    LDFLAGS="-L$(realpath ~/.pyenv/openssl/lib)"
+    export CONFIGURE_OPTS="--with-openssl=$(realpath ~/.pyenv/openssl)"
     pyenv install 3.7.5
     pyenv local 3.7.5
 fi
