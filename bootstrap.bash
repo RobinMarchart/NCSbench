@@ -37,10 +37,15 @@ if ! test -e ~/.pyenv/openssl_compiled; then
     popd
     touch ~/.pyenv/openssl_compiled
 fi
-CFLAGS="-I$(realpath ~/.pyenv/openssl/include)"
-LDFLAGS="-L$(realpath ~/.pyenv/openssl/lib)"
+
+PATH=$HOME/openssl/bin:$PATH
+LD_LIBRARY_PATH=$HOME/openssl/lib
+LC_ALL="en_US.UTF-8"
+LDFLAGS="-L$(realpath ~)/.pyenv/openssl/lib -Wl,-rpath,$(realpath ~)/.pyenv/openssl/lib"
 
 if ! test -d ~/.pyenv/versions/3.7.5; then
+    CFLAGS="-I$(realpath ~/.pyenv/openssl/include)"
+    LDFLAGS="-L$(realpath ~/.pyenv/openssl/lib)"
     pyenv install 3.7.5
     pyenv local 3.7.5
 fi
@@ -56,9 +61,15 @@ fi
 
 source activate NCSbench
 
-pip install wheel
+installed=python3 -m pip freeze
+
+if [[ $installed == *"wheel"* ]]; then
+    pip install wheel
+fi
 
 #pip install -r src/requirements.txt
-cd src
-./setup.py develop
-cd ..
+if [[ $installed == *"ncsbench"* ]]; then
+    cd src
+    ./setup.py develop
+    cd ..
+fi
