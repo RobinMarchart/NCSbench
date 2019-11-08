@@ -35,7 +35,7 @@ def main(debugging=False):
             "--measurement_folder": {"default": ".", 'help': 'Subfolder for measurements'},
             "--result_folder": {"default": ".."},
             "--port": {"default": 5555, "type": int},
-            # "--no-crane":{"action":"store_true"},
+            "--nocrane":{"action":"store_true"},
             "runs": {"default": 1, "type": int},
             "runtime": {"default": 120, "type": int}
         },
@@ -51,8 +51,9 @@ def main(debugging=False):
         "crane": {
             "--type": {"default": "ev3"},
             "--port": {"default": 5555, "type": int},
-            "--motor_port": {"default": "A", "choices": ["A", "B", "C", "D"]}},
-        # "--manual": {"action":"store_true"}
+            "--motor_port": {"default": "A", "choices": ["A", "B", "C", "D"]},
+            "--manual": {"action":"store_true"}
+        }
     }
     try:
         settings = json.load(open(os.path.expanduser("~/.NCSbench.json"), "r"))
@@ -64,7 +65,9 @@ def main(debugging=False):
     for k in defaults:
         a = defaults[k]
         for key in a:
-            if (not key in settings[k]) and ("default" in a[key]):
+            if not "default" in a[key]:
+                pass
+            elif not key in settings[k]:
                 settings[k][key] = a[key]["default"]
                 changed = True
             else:
@@ -72,10 +75,10 @@ def main(debugging=False):
     parser = argparse.ArgumentParser()
     parser.add_argument("--override", action="store_true")
     subparsers = parser.add_subparsers(required=True, dest="cmd")
-    for k in settings:
+    for k in defaults:
         if not k in []:
             p = subparsers.add_parser(k)
-            for parse in settings[k]:
+            for parse in defaults[k]:
                 p.add_argument(parse, **defaults[k][parse])
     args = parser.parse_args()
 
@@ -113,7 +116,7 @@ def main(debugging=False):
             target=broadcast_send, args=(server, message, args.port, event))
 
         con_socket = com_socket.ControllerSocket(
-            args.cport, args.result_folder, event)
+            args.cport, args.result_folder, event,args.nocrane)
         del event, server, message
         broadcast.start()
         broadcast.join()
@@ -161,15 +164,16 @@ def main(debugging=False):
         import ncsbench.common.ev3utils as args_lib
         args.lib = args_lib
         args.lib.init(args.type)
-        addr, d = rcv(args.port)
-        args.address = addr[0]
-        verbose, logging, sport, aport, cport, runs, runtime = d
-        args.verbose = verbose
-        args.logging = logging
-        args.sport = sport
-        args.aport = aport
-        args.cport = cport
-        args.runtime=runtime
+        if not(args.cmd == "crane" and args.manual):
+            addr, d = rcv(args.port)
+            args.address = addr[0]
+            verbose, logging, sport, aport, cport, runs, runtime = d
+            args.verbose = verbose
+            args.logging = logging
+            args.sport = sport
+            args.aport = aport
+            args.cport = cport
+            args.runtime=runtime
         if args.cmd == "robot":
             con_socket = com_socket.RobotSocket((args.address, args.cport))
 
@@ -188,15 +192,19 @@ def main(debugging=False):
                                     process.exitcode.to_bytes())
 
         elif args.cmd == "crane":
-            con_socket = com_socket.CraneSocket((args.address, args.cport))
-
-            def run_crane(args, queue_I, queue_O):
-                args.sock = com_socket.ClientWorkerReceiver(queue_I, queue_O)
+            if args.manual:
                 from ncsbench.crane import run
                 run(args)
-            con_socket.init()
-            while True:
-                process = multiprocessing.Process(target=run_crane, args=(
-                    args, con_socket.queue_I, con_socket.queue_O))
-                process.start()
-                process.join()
+            else:
+                con_socket = com_socket.CraneSocket((args.address, args.cport))
+
+                def run_crane(args, queue_I, queue_O):
+                    args.sock = com_socket.ClientWorkerReceiver(queue_I, queue_O)
+                    from ncsbench.crane import run
+                    run(args)
+                con_socket.init()
+                while True:
+                    process = multiprocessing.Process(target=run_crane, args=(
+                        args, con_socket.queue_I, con_socket.queue_O))
+                    process.start()
+                    process.join()

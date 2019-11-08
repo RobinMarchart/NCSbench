@@ -193,7 +193,7 @@ def _controller_shutdown_hook(s):
 
 
 class ControllerSocket(ControllSocket):
-    def __init__(self, cport,result_folder,connected:threading.Event):
+    def __init__(self, cport,result_folder,connected:threading.Event, no_crane):
         super().__init__()
         self.sock.bind(("", cport))
         self.sock.listen()
@@ -204,18 +204,26 @@ class ControllerSocket(ControllSocket):
         self.queue_O=multiprocessing.Queue()
         self.connected=connected
         self.ready=[threading.Event(),threading.Lock(),False]
+        self.no_crane=no_crane
 
+        ready_ev=None
         #ready event handler
-        def ready_event(ready, data, addr, sock):
-            ready[1].acquire()
-            if ready[2]:
+        if no_crane:
+            def ready_event(ready, data, addr, sock):
                 ready[0].set()
-                ready[2]=False
-            else:
-                ready[2]=True
-            ready[1].release()
+            ready_ev=ready_event
+        else:
+            def ready_event(ready, data, addr, sock):
+                ready[1].acquire()
+                if ready[2]:
+                    ready[0].set()
+                    ready[2]=False
+                else:
+                    ready[2]=True
+                ready[1].release()
+            ready_ev=ready_event
         
-        self.event[EVENTS.READY].always.add(lambda data,addr,sock:ready_event(self.ready,data,addr,sock))
+        self.event[EVENTS.READY].always.add(lambda data,addr,sock:ready_ev(self.ready,data,addr,sock))
 
         def recv_loop(sock, client):
             while True:

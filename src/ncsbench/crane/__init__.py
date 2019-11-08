@@ -1,19 +1,18 @@
 import atexit
 import ncsbench.common.socket as s
-from ..common.ev3utils import init as ev3_dict_init
+import time
 
 EV3 = None
 MOTOR = None
 
 def run(args):
-    #TODO manually controlled crane
     global EV3, MOTOR
     EV3=args.lib
     if args.type=="pistorms":
         print("unsupported platform: pistorms")
         print("\tstopping...")
         exit(1)
-    m = EV3.MediumMotor(ev3_dict_init(args).motors[args.motor_port])
+    m = EV3.MediumMotor(EV3.motors[args.motor_port])
     if m.connected:
         global MOTOR
         MOTOR = m
@@ -23,11 +22,57 @@ def run(args):
         exit(1)
     MOTOR.polarity = 'inversed'
     atexit.register(stop_coast)
-    args.sock.events[s.EVENTS.CRANE_STOP].always.add(lambda data:stop())
-    args.sock.events[s.EVENTS.CRANE_UP].always.add(lambda data:up())
-    args.sock.events[s.EVENTS.CRANE_DOWN].always.add(lambda data:down())
-    args.sock.events[s.EVENTS.EXIT].always.add(lambda data:exit(0))
-    args.sock.send(s.EVENTS.READY)
+    if args.manual:
+        import enum
+        class State(enum.Enum):
+            Null=0
+            Up=1
+            Down=2
+            Stop=3
+        state=[State.Null]
+        def up_hook(state_n,state):
+            if state_n:
+                if state!=State.Up:
+                    state=State.Up
+                    up()
+            else:
+                if state==State.Up:
+                    state=State.Null
+        EV3.Button.on_up=lambda state_n:up_hook(state_n,state[0])
+        def down_hook(state_n,state):
+            if state_n:
+                if state!=State.Down:
+                    state=State.Down
+                    down()
+            else:
+                if state==State.Down:
+                    state=State.Null
+        EV3.Button.on_down=lambda state_n:down_hook(state_n,state[0])
+        def stop_hook(state_n,state):
+            if state_n:
+                if state!=State.Stop:
+                    state=State.Stop
+                    stop()
+            else:
+                if state==State.Stop:
+                    state=State.Null
+        EV3.Button.on_enter=lambda state_n:stop_hook(state_n,state[0])
+        while not EV3.Button.backspace:
+            EV3.Button.process()
+            time.sleep(0.2)
+
+    else:
+        args.sock.events[s.EVENTS.CRANE_STOP].always.add(lambda data:stop())
+        def up_func():
+            up()
+            time.sleep(1)#wait until robot is up
+            #TODO fill in measured time
+            stop()
+            args.sock.send(s.EVENTS.CRANE_UP)
+        args.sock.events[s.EVENTS.CRANE_UP].always.add(lambda data:up_func())
+        args.sock.events[s.EVENTS.CRANE_DOWN].always.add(lambda data:down())
+        args.sock.events[s.EVENTS.EXIT].always.add(lambda data:exit(0))
+        args.sock.send(s.EVENTS.READY)
 
 def stop():
     MOTOR.stop(stop_action='hold')
