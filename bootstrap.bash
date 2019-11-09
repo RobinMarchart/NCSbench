@@ -61,12 +61,12 @@ source activate NCSbench
 
 installed=$(python3 -m pip freeze)
 
-if [[ $installed == *"wheel"* ]]; then
+if [[ $installed != *"wheel"* ]]; then
     pip install wheel
 fi
 
 #pip install -r src/requirements.txt
-if [[ $installed == *"ncsbench"* ]]; then
+if [[ $installed != *"ncsbench"* ]]; then
     cd src
     ./setup.py develop
     cd ..
