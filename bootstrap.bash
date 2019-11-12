@@ -15,37 +15,50 @@ else
     export PATH="$PYENV_ROOT/bin:$PATH"
 fi
 #openssl_version=$(openssl version | sed -n "s/^.*SSL\s*\(\S*\).*$/\1/p")
-if ! test -e ~/.pyenv/openssl_compiled; then
-    if test -d ~/.pyenv/openssl; then
-        rm -rf ~/.pyenv/openssl
+if ! test -e ~/.pyenv/lib_compiled; then
+    if test -d ~/.pyenv/lib; then
+        rm -rf ~/.pyenv/lib
     fi
     if test -d ~/.pyenv/openssldir; then
         rm -rf ~/.pyenv/openssldir
     fi
     echo "compiling openssl-1.1.1d"
-    if test -d /tmp/openssl/openssl-1.1.1d.tar.gz; then
-        echo "using cached /tmp/openssl/openssl-1.1.1d.tar.gz"
-    else
-        mkdir /tmp/openssl
-        curl https://www.openssl.org/source/openssl-1.1.1d.tar.gz --output /tmp/openssl/openssl-1.1.1d.tar.gz;if [[0 -ne $?]];then exit $?;fi
+    if test -d /tmp/py_lib;then
+        mkdir /tmp/py_lib
     fi
-    pushd /tmp/openssl
-    tar -xz -f openssl-1.1.1d.tar.gz;if [[0 -ne $?]];then exit $?;fi
+    if test -e /tmp/py_lib/openssl-1.1.1d.tar.gz; then
+        echo "using cached /tmp/py_lib/openssl-1.1.1d.tar.gz"
+    else
+        curl https://www.openssl.org/source/openssl-1.1.1d.tar.gz --output /tmp/py_lib/openssl-1.1.1d.tar.gz;if [[0 -ne $?]];then exit $?;fi
+    fi
+    if test -e /tmp/py_lib/zlib-1.2.11.tar.xz; then
+        echo "using cached /tmp/py_lib/zlib-1.2.11.tar.xz"
+    else
+        curl https://zlib.net/zlib-1.2.11.tar.xz --output /tmp/py_lib/zlib-1.2.11.tar.xz;if [[0 -ne $?]];then exit $?;fi
+    fi
+    pushd /tmp/py_lib
+    tar -xa -f openssl-1.1.1d.tar.gz;if [[0 -ne $?]];then exit $?;fi
+    tar -xa -f zlib-1.2.11.tar.xz;if [[0 -ne $?]];then exit $?;fi
     cd openssl-1.1.1d
-    ./config --prefix=$(realpath ~/.pyenv/openssl) --openssldir=$(realpath ~/.pyenv/openssldir) $CONFIGURE_OPTS;if [[0 -ne $?]];then exit $?;fi
+    ./config --prefix=$(realpath ~/.pyenv/lib) --openssldir=$(realpath ~/.pyenv/openssldir) $CONFIGURE_OPTS;if [[0 -ne $?]];then exit $?;fi
     make;if [[0 -ne $?]];then exit $?;fi
     make test;if [[0 -ne $?]];then exit $?;fi
     make install;if [[0 -ne $?]];then exit $?;fi
+    cd ../zlib-1.2.11
+    ./configure --prefix=$(realpath ~/.pyenv/lib) $CONFIGURE_OPTS;if [[0 -ne $?]];then exit $?;fi
+    make
+    make test
+    make install
     popd
-    touch ~/.pyenv/openssl_compiled
+    touch ~/.pyenv/lib_compiled
 fi
 
-export PATH=$HOME/openssl/bin:$PATH
-export LD_LIBRARY_PATH=$HOME/openssl/lib
-export LDFLAGS="-L$(realpath ~)/.pyenv/openssl/lib -Wl,-rpath,$(realpath ~)/.pyenv/openssl/lib"
+export PATH=$HOME/.pyenv/lib/bin:$PATH
+export LD_LIBRARY_PATH=$HOME/.pyenv/lib/lib:$LD_LIBRARY_PATH
+export LDFLAGS="-L$(realpath ~)/.pyenv/lib/lib -Wl,-rpath,$(realpath ~)/.pyenv/lib/lib $LDFLAGS"
 
 if ! test -d ~/.pyenv/versions/3.7.5; then
-    export CONFIGURE_OPTS="--with-openssl=$(realpath ~/.pyenv/openssl) $CONFIGURE_OPTS"
+    export CONFIGURE_OPTS="--with-openssl=$(realpath ~/.pyenv/lib) $CONFIGURE_OPTS"
     pyenv install 3.7.5;if [[0 -ne $?]];then exit $?;fi
     pyenv local 3.7.5;if [[0 -ne $?]];then exit $?;fi
 fi
