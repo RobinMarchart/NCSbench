@@ -40,7 +40,7 @@ if ! test -e ~/.pyenv/lib_compiled; then
     tar -xa -f openssl-1.1.1d.tar.gz;if [[ 0 -ne $? ]];then exit $?;fi
     tar -xa -f zlib-1.2.11.tar.xz;if [[ 0 -ne $? ]];then exit $?;fi
     cd openssl-1.1.1d
-    ./Configure --prefix=$(realpath ~/.pyenv/lib) --openssldir=$(realpath ~/.pyenv/openssldir) $TRIPPLE;if [[ 0 -ne $? ]];then exit $?;fi
+    ./config --prefix=$(realpath ~/.pyenv/lib) --openssldir=$(realpath ~/.pyenv/openssldir);if [[ 0 -ne $? ]];then exit $?;fi
     make;if [[ 0 -ne $? ]];then exit $?;fi
     make test;if [[ 0 -ne $? ]];then exit $?;fi
     make install;if [[ 0 -ne $? ]];then exit $?;fi
