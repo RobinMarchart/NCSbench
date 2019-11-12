@@ -2,13 +2,14 @@ if test -d ~/.pyenv; then
     export PYENV_ROOT="$HOME/.pyenv"
     export PATH="$PYENV_ROOT/bin:$PATH"
 else
-    git clone https://github.com/pyenv/pyenv.git ~/.pyenv
-    git clone https://github.com/pyenv/pyenv-virtualenv.git ~/.pyenv/plugins/pyenv-virtualenv
+    if ! git clone https://github.com/pyenv/pyenv.git ~/.pyenv;then exit $?;fi
+    if ! git clone https://github.com/pyenv/pyenv-virtualenv.git ~/.pyenv/plugins/pyenv-virtualenv;then exit $?;fi
 
     echo "installing dev dependencies"
-    sudo -B apt-get update
-    sudo -B apt-get install --no-install-recommends -y make build-essential zlib1g-dev libbz2-dev \
-        libreadline-dev libsqlite3-dev wget curl llvm libncurses5-dev xz-utils tk-dev libxml2-dev libxmlsec1-dev libffi-dev liblzma-dev
+    if ! sudo -B apt-get update;then exit $?;fi
+    if ! sudo -B apt-get install --no-install-recommends -y make build-essential zlib1g-dev libbz2-dev \
+        libreadline-dev libsqlite3-dev wget curl llvm libncurses5-dev xz-utils tk-dev libxml2-dev libxmlsec1-dev libffi-dev liblzma-dev\
+        ;then exit $?;fi
 
     export PYENV_ROOT="$HOME/.pyenv"
     export PATH="$PYENV_ROOT/bin:$PATH"
@@ -26,14 +27,15 @@ if ! test -e ~/.pyenv/openssl_compiled; then
         echo "using cached /tmp/openssl/openssl-1.1.1d.tar.gz"
     else
         mkdir /tmp/openssl
-        curl https://www.openssl.org/source/openssl-1.1.1d.tar.gz --output /tmp/openssl/openssl-1.1.1d.tar.gz
+        if ! curl https://www.openssl.org/source/openssl-1.1.1d.tar.gz --output /tmp/openssl/openssl-1.1.1d.tar.gz;then exit $?;fi
     fi
     pushd /tmp/openssl
-    tar -xz -f openssl-1.1.1d.tar.gz
+    if ! tar -xz -f openssl-1.1.1d.tar.gz;then exit $?;fi
     cd openssl-1.1.1d
-    ./config --prefix=$(realpath ~/.pyenv/openssl) --openssldir=$(realpath ~/.pyenv/openssldir)
-    make
-    make install
+    if ! ./config --prefix=$(realpath ~/.pyenv/openssl) --openssldir=$(realpath ~/.pyenv/openssldir);then exit $?;fi
+    if ! make;then exit $?;fi
+    if ! make test;then exit $?;fi
+    if ! make install;then exit $?;fi
     popd
     touch ~/.pyenv/openssl_compiled
 fi
@@ -44,8 +46,8 @@ export LDFLAGS="-L$(realpath ~)/.pyenv/openssl/lib -Wl,-rpath,$(realpath ~)/.pye
 
 if ! test -d ~/.pyenv/versions/3.7.5; then
     export CONFIGURE_OPTS="--with-openssl=$(realpath ~/.pyenv/openssl)"
-    pyenv install 3.7.5
-    pyenv local 3.7.5
+    if ! pyenv install 3.7.5;then exit $?;fi
+    if ! pyenv local 3.7.5;then exit $?;fi
 fi
 
 if command -v pyenv 1>/dev/null 2>&1; then
@@ -54,7 +56,7 @@ fi
 eval "$(pyenv virtualenv-init -)"
 
 if ! test -d ~/.pyenv/versions/3.7.5/envs/NCSbench; then
-    pyenv virtualenv 3.7.5 NCSbench
+    if ! pyenv virtualenv 3.7.5 NCSbench;then exit $?;fi
 fi
 
 source activate NCSbench
@@ -62,12 +64,12 @@ source activate NCSbench
 installed=$(python3 -m pip freeze)
 
 if [[ $installed != *"wheel"* ]]; then
-    pip install wheel
+    if ! pip install wheel;then exit $?;fi
 fi
 
 #pip install -r src/requirements.txt
 if [[ $installed != *"ncsbench"* ]]; then
     cd src
-    ./setup.py develop
+    if ! ./setup.py develop;then exit $?;fi
     cd ..
 fi
