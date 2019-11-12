@@ -23,7 +23,7 @@ if ! test -e ~/.pyenv/lib_compiled; then
         rm -rf ~/.pyenv/openssldir
     fi
     echo "compiling openssl-1.1.1d"
-    if test -d /tmp/py_lib;then
+    if ! test -d /tmp/py_lib;then
         mkdir /tmp/py_lib
     fi
     if test -e /tmp/py_lib/openssl-1.1.1d.tar.gz; then
