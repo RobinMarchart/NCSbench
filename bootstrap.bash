@@ -6,7 +6,7 @@ else
     git clone https://github.com/pyenv/pyenv-virtualenv.git ~/.pyenv/plugins/pyenv-virtualenv;if 0 -ne $?;then exit $?;fi
 
     echo "installing dev dependencies"
-    sudo apt-get update;then exit $?;fi
+    sudo apt-get update;if 0 -ne $?;then exit $?;fi
     sudo apt-get install --no-install-recommends -y make build-essential zlib1g-dev libbz2-dev \
         libreadline-dev libsqlite3-dev wget curl llvm libncurses5-dev xz-utils tk-dev libxml2-dev libxmlsec1-dev libffi-dev liblzma-dev\
         ;if 0 -ne $?;then exit $?;fi
