@@ -23,18 +23,18 @@ if ! test -e ~/.pyenv/lib_compiled; then
         rm -rf ~/.pyenv/openssldir
     fi
     echo "compiling openssl-1.1.1d"
-    if test -d /tmp/py_lib;then
+    if ! test -d /tmp/py_lib;then
         mkdir /tmp/py_lib
     fi
     if test -e /tmp/py_lib/openssl-1.1.1d.tar.gz; then
         echo "using cached /tmp/py_lib/openssl-1.1.1d.tar.gz"
     else
-        curl https://www.openssl.org/source/openssl-1.1.1d.tar.gz --output /tmp/py_lib/openssl-1.1.1d.tar.gz;if [[ 0 -ne $? ]];then exit $?;fi
+        curl https://www.openssl.org/source/openssl-1.1.1d.tar.gz --output /tmp/py_lib/openssl-1.1.1d.tar.gz;if [[ 0 -ne $? ]];then exit 1;fi
     fi
     if test -e /tmp/py_lib/zlib-1.2.11.tar.xz; then
         echo "using cached /tmp/py_lib/zlib-1.2.11.tar.xz"
     else
-        curl https://zlib.net/zlib-1.2.11.tar.xz --output /tmp/py_lib/zlib-1.2.11.tar.xz;if [[ 0 -ne $? ]];then exit $?;fi
+        curl https://zlib.net/zlib-1.2.11.tar.xz --output /tmp/py_lib/zlib-1.2.11.tar.xz;if [[ 0 -ne $? ]];then exit 1;fi
     fi
     pushd /tmp/py_lib
     tar -xa -f openssl-1.1.1d.tar.gz;if [[ 0 -ne $? ]];then exit $?;fi
