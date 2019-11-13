@@ -455,8 +455,10 @@ def run(args):
     logging.debug("IP address of the controller: %s", args.address)
 
     #  Nice to process for better timing performance (needs sudo!)
-    os.nice(-11)
-
+    try:
+        os.nice(-11)
+    except PermissionError:
+        pass
     def at_exit():
         motorDutyCycleFile_left, motorDutyCycleFile_right = init_actuators()
         SetDuty(motorDutyCycleFile_left, 0)
