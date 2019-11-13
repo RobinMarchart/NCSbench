@@ -253,3 +253,8 @@ git-daemon-export-ok
 **/settings.json
 .python-version
 workspace.code-workspace
+benchmark/plots/platform-a-wireless-counters.tex
+benchmark/plots/platform-a-wireless-gyro.tex
+benchmark/plots/platform-a-wireless-motorpos.tex
+benchmark/plots/platform-a-wireless-network-delays.tex
+benchmark/plots/platform-a-wireless-motorvolt.tex
