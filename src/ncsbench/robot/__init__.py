@@ -77,7 +77,7 @@ def init_sensors():
     """
     # Create EV3 resource objects
     
-    gyroSensor = ev3.GyroSensor(argv.sensors[argv.gyro_port])
+    gyroSensor = ev3.GyroSensor(ev3.sensors[argv.gyro_port])
     gyroSensor.mode = gyroSensor.MODE_GYRO_RATE
     touch1=ev3.TouchSensor(argv.sensors[argv.touch_1_port])
     touch2=ev3.TouchSensor(argv.sensors[argv.touch_2_port])
