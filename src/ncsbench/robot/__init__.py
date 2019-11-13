@@ -159,10 +159,10 @@ def main(ts, c_addr, s_port, a_port, c_port, log_enabled,c_sock,runtime):
     start_time=None
 
     buttons = ev3.Button()
-    leds = ev3.Leds()
+    #leds = ev3.Leds()
 
-    leds.set_color(leds.LEFT, leds.RED)
-    leds.set_color(leds.RIGHT, leds.RED)
+    #leds.set_color(leds.LEFT, leds.RED)
+    #leds.set_color(leds.RIGHT, leds.RED)
 
     logging.info(
         "Lay down the robot.Waiting for ROBOT_CALLIB")
@@ -192,8 +192,8 @@ def main(ts, c_addr, s_port, a_port, c_port, log_enabled,c_sock,runtime):
 
     logging.info("Calibration done.")
     ev3.Sound.beep().wait()
-    leds.set_color(leds.LEFT, leds.AMBER)
-    leds.set_color(leds.RIGHT, leds.AMBER)
+    #leds.set_color(leds.LEFT, leds.AMBER)
+    #leds.set_color(leds.RIGHT, leds.AMBER)
     def wait_for(f,t,*args):
         time.sleep(t)
         f(*args)
@@ -308,8 +308,8 @@ def main(ts, c_addr, s_port, a_port, c_port, log_enabled,c_sock,runtime):
                 if rx_packet is not None:
                     if first_packet:
                         logging.info("Control loop started.")
-                        leds.set_color(leds.LEFT, leds.GREEN)
-                        leds.set_color(leds.RIGHT, leds.GREEN)
+                        #leds.set_color(leds.LEFT, leds.GREEN)
+                        #leds.set_color(leds.RIGHT, leds.GREEN)
                         first_packet = False
                         start_time=time.perf_counter()
                     tasrx_k = time.perf_counter()  # reception of the time request from the controller
@@ -368,16 +368,16 @@ def main(ts, c_addr, s_port, a_port, c_port, log_enabled,c_sock,runtime):
                 logging.debug("avg_diff: %f, var_diff: %f, sampling_time: %f",
                               avg_diff, diff_variance, p.SAMPLING_TIME)
                 logging.info("Control loop stopped.")
-                leds.set_color(leds.LEFT, leds.RED)
-                leds.set_color(leds.RIGHT, leds.RED)
+                #leds.set_color(leds.LEFT, leds.RED)
+                #leds.set_color(leds.RIGHT, leds.RED)
                 if log_enabled:
 
                     f.close()
                 exit(0)
             if finished:
                 logging.info("Control loop finished.") 
-                leds.set_color(leds.LEFT, leds.RED)
-                leds.set_color(leds.RIGHT, leds.RED)
+                #leds.set_color(leds.LEFT, leds.RED)
+                #leds.set_color(leds.RIGHT, leds.RED)
                 if log_enabled:
                     f.close()
                 message=bytearray(struct.pack("!d",-1.0))
@@ -392,8 +392,8 @@ def main(ts, c_addr, s_port, a_port, c_port, log_enabled,c_sock,runtime):
                 SetDuty(motorDutyCycleFile_left, 0)
                 SetDuty(motorDutyCycleFile_right, 0)
                 logging.info("Control loop stopped.") 
-                leds.set_color(leds.LEFT, leds.RED)
-                leds.set_color(leds.RIGHT, leds.RED)
+                #leds.set_color(leds.LEFT, leds.RED)
+                #leds.set_color(leds.RIGHT, leds.RED)
                 if log_enabled:
                     f.close()
                 time=stop_time-start_time
