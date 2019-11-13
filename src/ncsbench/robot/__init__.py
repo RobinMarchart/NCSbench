@@ -78,12 +78,12 @@ def init_sensors():
     # Create EV3 resource objects
     
     gyroSensor = ev3.GyroSensor(ev3.sensors[argv.gyro_port])
-    time.sleep(0.1)
+    time.sleep(0.1)#work around for https://github.com/ev3dev/ev3dev-lang-python/issues/234
     gyroSensor.mode = gyroSensor.MODE_GYRO_RATE
-    touch1=ev3.TouchSensor(argv.sensors[argv.touch_1_port])
-    touch2=ev3.TouchSensor(argv.sensors[argv.touch_2_port])
-    motorLeft = ev3.LargeMotor(argv.motors[argv.motor_l_port])
-    motorRight = ev3.LargeMotor(argv.motors[argv.motor_r_port])
+    touch1=ev3.TouchSensor(ev3.sensors[argv.touch_1_port])
+    touch2=ev3.TouchSensor(ev3.sensors[argv.touch_2_port])
+    motorLeft = ev3.LargeMotor(ev3.motors[argv.motor_l_port])
+    motorRight = ev3.LargeMotor(ev3.motors[argv.motor_r_port])
 
     # Open sensor and motor files
     gyroSensorValueRaw = open(gyroSensor._path + "/value0", "rb")
