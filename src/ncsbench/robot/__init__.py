@@ -91,8 +91,8 @@ def init_sensors():
     # Reset the motors
     motorLeft.reset()
     motorRight.reset()
-    motorLeft.run_direct(duty_cycle_sp=0)
-    motorRight.run_direct(duty_cycle_sp=0)
+    motorLeft.run_direct()
+    motorRight.run_direct()
 
     motorEncoderLeft = open(motorLeft._path + "/position", "rb")
     motorEncoderRight = open(motorRight._path + "/position", "rb")
