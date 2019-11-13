@@ -2,9 +2,9 @@ ev3_type=""
 sensors,motors={},{}
 INPUT_1,INPUT_2,INPUT_3,INPUT_4,OUTPUT_A,OUTPUT_B,OUTPUT_C,OUTPUT_D="","","","","","","",""
 MediumMotor,LargeMotor,TouchSensor,GyroSensor=None,None,None,None
-Button=None
+Button,Leds=None,None
 def init(ev3:str):
-    global ev3_type,sensors,motors,INPUT_1,INPUT_2,INPUT_3,INPUT_4,OUTPUT_A,OUTPUT_B,OUTPUT_C,OUTPUT_D,MediumMotor,LargeMotor,TouchSensor,GyroSensor,Button
+    global ev3_type,sensors,motors,INPUT_1,INPUT_2,INPUT_3,INPUT_4,OUTPUT_A,OUTPUT_B,OUTPUT_C,OUTPUT_D,MediumMotor,LargeMotor,TouchSensor,GyroSensor,Button,Leds
     ev3_type=ev3
     from importlib import import_module
     lib=None
@@ -22,3 +22,4 @@ def init(ev3:str):
         class B:
             up=False
         Button=B
+    Leds=lib.Leds
